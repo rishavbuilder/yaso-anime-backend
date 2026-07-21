@@ -51,6 +51,7 @@ const params = new URLSearchParams(location.search);
 const id = params.get('id');
 const slug = params.get('slug');
 const ep = Number(params.get('ep')) || 1;
+const isNsfw = getNsfw() || params.get('nsfw') === '1';
 let hlsInstance = null;
 let autoPlayTimer = null;
 let animeDetail = null;
@@ -59,6 +60,30 @@ let currentSource = null;
 
 async function loadWatch() {
   try {
+    if (isNsfw && slug) {
+      animeDetail = await fetchNsfwDetail(slug);
+      if (!animeDetail) throw new Error('NSFW content not found');
+      totalEps = 1;
+      document.getElementById('bcDetail').textContent = animeDetail.title || slug;
+      document.getElementById('bcDetail').href = `/details.html?slug=${encodeURIComponent(slug)}&nsfw=1`;
+      document.getElementById('bcEp').textContent = t('Episode') + ' ' + ep;
+      renderAnimeInfo();
+
+      const streamData = await fetchNsfwStream(slug, ep);
+      document.getElementById('watchLoading').style.display = 'none';
+
+      currentSource = streamData.source || 'nsfw';
+      const servers = streamData.servers || [];
+      renderNsfwServers(servers);
+
+      if (streamData.master_url) loadHlsPlayer(streamData.master_url, streamData.embed_url);
+      else if (streamData.embed_url) {
+        if (streamData.embed_url.includes('.mp4') || streamData.embed_url.includes('.m3u8')) loadHlsPlayer(streamData.embed_url);
+        else loadIframePlayer(streamData.embed_url);
+      }
+      else throw new Error('No stream found');
+      return;
+    }
     if (id) {
       animeDetail = await fetchAnimeDetail(id);
     } else {
@@ -110,6 +135,25 @@ async function loadWatch() {
   }
 }
 
+function renderNsfwServers(servers) {
+  const el = document.getElementById('wkServers');
+  if (!servers.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  window._servers = servers;
+  el.innerHTML = '<div class="wk-server-group"><span class="wk-server-badge other">' + t('SERVER') + '</span><div class="wk-server-btns">' +
+    servers.map((s, i) => `<button class="wk-server-btn${i===0?' active':''}" data-idx="${i}" onclick="switchNsfwServer(${i})">${s.label || ('Source ' + (i+1))}</button>`).join('') +
+    '</div></div>';
+}
+
+function switchNsfwServer(idx) {
+  const servers = window._servers || [];
+  const srv = servers[idx];
+  if (!srv) return;
+  document.querySelectorAll('.wk-server-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.idx) === idx));
+  if (srv.url.includes('.m3u8') || srv.url.includes('.mp4')) loadHlsPlayer(srv.url);
+  else loadIframePlayer(srv.url);
+}
+
 function renderServers(servers) {
   const el = document.getElementById('wkServers');
   if (!servers.length) { el.style.display = 'none'; return; }
@@ -157,6 +201,7 @@ function watchUrl(epNum) {
   if (id) p.push('id=' + id);
   if (slug) p.push('slug=' + slug);
   p.push('ep=' + epNum);
+  if (isNsfw) p.push('nsfw=1');
   return '/watch.html?' + p.join('&');
 }
 
@@ -212,7 +257,7 @@ function renderAnimeInfo() {
   const genres = (a.genres||[]).slice(0,6).map(g => typeof g === 'string' ? g : (g && g.name) || '');
   const desc = (a.description||'').replace(/<[^>]+>/g,'');
   const shortDesc = desc.length > 400 ? desc.slice(0, 400) + '...' : desc;
-  const detailsHref = a.id ? '/details.html?id=' + a.id : (slug ? '/details.html?slug=' + encodeURIComponent(slug) : '#');
+  const detailsHref = a.id ? '/details.html?id=' + a.id + (isNsfw ? '&nsfw=1' : '') : (slug ? '/details.html?slug=' + encodeURIComponent(slug) + (isNsfw ? '&nsfw=1' : '') : '#');
   const inList = a.id ? isInWatchlist(a.id) : false;
 
   document.getElementById('wkInfo').innerHTML = `
@@ -401,7 +446,7 @@ function loadIframePlayer(url) {
   const iframe = document.createElement('iframe');
   iframe.src = url;
   iframe.allow = 'autoplay; fullscreen; picture-in-picture';
-  iframe.referrerPolicy = 'no-referrer';
+  iframe.referrerPolicy = isNsfw ? 'no-referrer-when-downgrade' : 'no-referrer';
   div.appendChild(iframe);
   if (animeDetail) {
     const cwEntry = {

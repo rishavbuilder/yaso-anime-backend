@@ -135,34 +135,48 @@ async function apiPost(path, body) {
 }
 
 async function fetchTrending() {
-  const data = await api('/api/anikoto/trending?nsfw=' + getNsfw());
+  if (getNsfw()) { const data = await api('/api/nsfw/trending'); return data.results || []; }
+  const data = await api('/api/anikoto/trending');
   return data.results || [];
 }
 
 async function fetchBrowse(section) {
+  if (getNsfw()) {
+    let url = '/api/nsfw/homepage';
+    const data = await api(url);
+    const section_order = ["trending", "recent", "upcoming", "new_release", "new_added", "completed"];
+    const sections = {};
+    for (const k of section_order) sections[k] = data[k] || [];
+    return { results: (section && sections[section]) || data.recent || [], total: 24, sections: section_order };
+  }
   let url = '/api/browse';
   const params = [];
   if (section) params.push('section=' + encodeURIComponent(section));
-  params.push('nsfw=' + getNsfw());
   url += '?' + params.join('&');
   const data = await api(url);
   return data;
 }
 
 async function fetchBrowseCategory(category, page) {
-  return api('/api/browse/' + encodeURIComponent(category) + '?page=' + (page || 1) + '&nsfw=' + getNsfw());
+  return api('/api/browse/' + encodeURIComponent(category) + '?page=' + (page || 1));
 }
 
 async function fetchBrowseGenre(slug, page) {
-  return api('/api/browse/genre/' + encodeURIComponent(slug) + '?page=' + (page || 1) + '&nsfw=' + getNsfw());
+  if (getNsfw()) return api('/api/nsfw/homepage');
+  return api('/api/browse/genre/' + encodeURIComponent(slug) + '?page=' + (page || 1));
 }
 
 async function fetchBrowseType(slug, page) {
-  return api('/api/browse/type/' + encodeURIComponent(slug) + '?page=' + (page || 1) + '&nsfw=' + getNsfw());
+  if (getNsfw()) return api('/api/nsfw/homepage');
+  return api('/api/browse/type/' + encodeURIComponent(slug) + '?page=' + (page || 1));
 }
 
 async function fetchBrowseFilter(genre, termType, page) {
-  let url = '/api/browse/filter?page=' + (page || 1) + '&nsfw=' + getNsfw();
+  if (getNsfw()) {
+    if (genre) return api('/api/nsfw/search?q=' + encodeURIComponent(genre));
+    return api('/api/nsfw/homepage');
+  }
+  let url = '/api/browse/filter?page=' + (page || 1);
   if (genre) url += '&genre=' + encodeURIComponent(genre);
   if (termType) url += '&term_type=' + encodeURIComponent(termType);
   return api(url);
@@ -172,7 +186,11 @@ async function fetchBrowseGenres() { return api('/api/browse/genres'); }
 async function fetchBrowseTypes() { return api('/api/browse/types'); }
 
 async function fetchSearch(q, page) {
-  const data = await api('/search?q=' + encodeURIComponent(q) + '&page=' + (page || 1) + '&nsfw=' + getNsfw());
+  if (getNsfw()) {
+    const data = await api('/api/nsfw/search?q=' + encodeURIComponent(q) + '&page=' + (page || 1));
+    return data.results || [];
+  }
+  const data = await api('/search?q=' + encodeURIComponent(q) + '&page=' + (page || 1));
   return data.results || [];
 }
 
@@ -190,22 +208,46 @@ async function fetchStream(title, episode, source, slug) {
   return apiPost('/stream', { title, episode: Number(episode), source: source || 'auto', slug: slug || '' });
 }
 
-async function fetchAnikotoHomepage() { return api('/api/anikoto/homepage?nsfw=' + getNsfw()); }
-async function fetchAnikotoRecent() { return api('/api/anikoto/recent?nsfw=' + getNsfw()); }
-async function fetchAnikotoUpcoming() { return api('/api/anikoto/upcoming?nsfw=' + getNsfw()); }
-async function fetchAnikotoNewRelease() { return api('/api/anikoto/new-release?nsfw=' + getNsfw()); }
-async function fetchAnikotoNewAdded() { return api('/api/anikoto/new-added?nsfw=' + getNsfw()); }
-async function fetchAnikotoCompleted() { return api('/api/anikoto/completed?nsfw=' + getNsfw()); }
-async function fetchAnikotoTop() { return api('/api/anikoto/top?nsfw=' + getNsfw()); }
+async function fetchAnikotoHomepage() {
+  if (getNsfw()) return api('/api/nsfw/homepage');
+  return api('/api/anikoto/homepage');
+}
+async function fetchAnikotoRecent() {
+  if (getNsfw()) return api('/api/nsfw/recent');
+  return api('/api/anikoto/recent');
+}
+async function fetchAnikotoUpcoming() {
+  if (getNsfw()) return { results: [] };
+  return api('/api/anikoto/upcoming');
+}
+async function fetchAnikotoNewRelease() {
+  if (getNsfw()) return api('/api/nsfw/new-release');
+  return api('/api/anikoto/new-release');
+}
+async function fetchAnikotoNewAdded() {
+  if (getNsfw()) return api('/api/nsfw/new-added');
+  return api('/api/anikoto/new-added');
+}
+async function fetchAnikotoCompleted() {
+  if (getNsfw()) return api('/api/nsfw/completed');
+  return api('/api/anikoto/completed');
+}
+async function fetchAnikotoTop() {
+  if (getNsfw()) return api('/api/nsfw/top');
+  return api('/api/anikoto/top');
+}
 
-async function fetchLatestEpisodes(page) { return api('/api/latest-episodes?page=' + (page||1) + '&nsfw=' + getNsfw()); }
+async function fetchNsfwDetail(slug) { return api('/api/nsfw/detail?slug=' + encodeURIComponent(slug)); }
+async function fetchNsfwStream(slug, episode) { return apiPost('/api/nsfw/stream', { slug: slug || '', episode: Number(episode || 1) }); }
+
+async function fetchLatestEpisodes(page) { return api('/api/latest-episodes?page=' + (page||1)); }
 async function fetchSchedule() { return api('/api/schedule'); }
 async function fetchRecommendations(animeId) { return api('/api/anilist/recommendations/' + animeId); }
 async function fetchSimilar(genre, exclude) { return api('/api/similar?genre=' + encodeURIComponent(genre || '') + '&exclude=' + encodeURIComponent(exclude || '')); }
-async function fetchUpcoming(page) { return api('/api/upcoming?page=' + (page||1) + '&nsfw=' + getNsfw()); }
-async function fetchNewReleases(page) { return api('/api/new-releases?page=' + (page||1) + '&nsfw=' + getNsfw()); }
-async function fetchNewAdded(page) { return api('/api/new-added?page=' + (page||1) + '&nsfw=' + getNsfw()); }
-async function fetchJustCompleted(page) { return api('/api/just-completed?page=' + (page||1) + '&nsfw=' + getNsfw()); }
+async function fetchUpcoming(page) { return api('/api/upcoming?page=' + (page||1)); }
+async function fetchNewReleases(page) { return api('/api/new-releases?page=' + (page||1)); }
+async function fetchNewAdded(page) { return api('/api/new-added?page=' + (page||1)); }
+async function fetchJustCompleted(page) { return api('/api/just-completed?page=' + (page||1)); }
 
 /* ── Manga API ── */
 async function fetchMangaSearch(q, page, origLang) {

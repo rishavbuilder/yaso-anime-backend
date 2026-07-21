@@ -51,6 +51,12 @@ function timeUntil(ts) {
 async function loadDetail() {
   try {
     let a;
+    if (getNsfw() && slug) {
+      a = await fetchNsfwDetail(slug);
+      if (!a) throw new Error(t('Anime not found'));
+      renderNsfwDetail(a);
+      return;
+    }
     if (id) {
       a = await fetchAnimeDetail(id);
     } else if (slug) {
@@ -206,6 +212,46 @@ async function loadDetail() {
   }
 }
 loadDetail();
+
+function renderNsfwDetail(a) {
+  const desc = (a.description || '').replace(/<[^>]+>/g, '');
+  const genres = a.tags || a.genres || [];
+  const streams = a.stream_urls || [];
+
+  let streamsHtml = '';
+  if (streams.length) {
+    streamsHtml = `<div class="detail-section">
+      <h3 class="detail-section-title">${t('Watch')}</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${streams.map((s, i) => `<a class="btn" href="/watch.html?slug=${encodeURIComponent(slug)}&ep=1&nsfw=1&stream=${i}" style="padding:8px 16px;font-size:.66rem;"><span>${s.label || ('Source ' + (i+1))}</span></a>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  main.innerHTML = `
+    <div class="breadcrumb" style="padding:80px 5vw 0"><a href="/" data-i18n="Home">Home</a> / <span>${a.title || ''}</span></div>
+    <div style="width:100%;overflow:hidden"><img class="detail-banner" src="${a.cover || ''}" alt="" onerror="this.style.background='var(--night-soft)'" style="max-height:300px;object-fit:cover;"></div>
+    <div class="detail-wrap">
+      <img class="detail-cover" src="${a.cover || ''}" alt="">
+      <div class="detail-info">
+        <div class="detail-title">${a.title || ''}</div>
+        ${a.source ? `<div class="detail-subtitle"><span>${a.source}</span></div>` : ''}
+        <div class="detail-tags">
+          ${genres.slice(0,5).map(g => `<span class="detail-tag">${typeof g === 'string' ? g : g.name || ''}</span>`).join('')}
+          ${streams.length ? `<span class="detail-tag">${streams.length} ${t('sources')}</span>` : ''}
+        </div>
+        <div class="detail-actions">
+          ${streams.length ? `<a class="btn" href="/watch.html?slug=${encodeURIComponent(slug)}&ep=1&nsfw=1&stream=0"><span>${t('▶ Watch')}</span></a>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="detail-body">
+      <div>
+        ${desc ? `<div class="detail-section"><h3 class="detail-section-title">${t('Synopsis')}</h3><p style="color:var(--washi-dim);line-height:1.8;">${desc}</p></div>` : ''}
+        ${streamsHtml}
+      </div>
+    </div>`;
+}
 
 function handleDetailWatchlist(btn) {
   const anime = {

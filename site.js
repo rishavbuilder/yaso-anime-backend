@@ -1,13 +1,15 @@
 const SITE = { headerSearchTimer: null, searchTimer: null };
 
 function animeLink(a) {
-  if (a.slug) return `/watch.html?slug=${encodeURIComponent(a.slug)}&ep=1`;
-  if (a.id) return `/details.html?id=${a.id}`;
+  const nsfw = getNsfw() ? '&nsfw=1' : '';
+  if (a.slug) return `/watch.html?slug=${encodeURIComponent(a.slug)}&ep=1${nsfw}`;
+  if (a.id) return `/details.html?id=${a.id}${nsfw}`;
   return '#';
 }
 function animeHref(a) {
-  if (a.id) return `/details.html?id=${a.id}`;
-  if (a.slug) return `/details.html?slug=${encodeURIComponent(a.slug)}`;
+  const nsfw = getNsfw() ? '&nsfw=1' : '';
+  if (a.id) return `/details.html?id=${a.id}${nsfw}`;
+  if (a.slug) return `/details.html?slug=${encodeURIComponent(a.slug)}${nsfw}`;
   return '#';
 }
 
@@ -266,8 +268,9 @@ function renderBrowseCard(anime) {
 
 function renderAnikotoCard(a) {
   const slug = a.slug || '';
-  const detailHref = `/details.html?slug=${encodeURIComponent(slug)}`;
-  const watchHref = `/watch.html?slug=${encodeURIComponent(slug)}&ep=1`;
+  const nsfw = getNsfw() ? '&nsfw=1' : '';
+  const detailHref = `/details.html?slug=${encodeURIComponent(slug)}${nsfw}`;
+  const watchHref = `/watch.html?slug=${encodeURIComponent(slug)}&ep=1${nsfw}`;
   const sub = a.sub || 0;
   const dub = a.dub || 0;
   let badges = '';
@@ -448,7 +451,8 @@ function renderContinueWatching(items) {
   return '<div class="cw-rail">' + items.slice(0, 12).map(a => {
     const pct = a.duration ? Math.round((a.time / a.duration) * 100) : 0;
     const mins = Math.floor((a.duration - a.time) / 60);
-    const href = a.slug ? `/watch.html?slug=${encodeURIComponent(a.slug)}&ep=${a.ep}` : (a.id ? `/watch.html?id=${a.id}&ep=${a.ep}` : '#');
+    const nsfw = getNsfw() ? '&nsfw=1' : '';
+    const href = a.slug ? `/watch.html?slug=${encodeURIComponent(a.slug)}&ep=${a.ep}${nsfw}` : (a.id ? `/watch.html?id=${a.id}&ep=${a.ep}${nsfw}` : '#');
     return `<a class="cw-card" href="${href}">
       <div class="cw-cover-wrap">
         <img class="cw-cover" src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
@@ -467,7 +471,8 @@ function renderContinueWatching(items) {
 function renderMyList(items) {
   if (!items || !items.length) return '';
   return '<div class="wl-rail">' + items.slice(0, 12).map(a => {
-    const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}` : (a.id ? `/details.html?id=${a.id}` : '#');
+    const nsfw = getNsfw() ? '&nsfw=1' : '';
+    const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}${nsfw}` : (a.id ? `/details.html?id=${a.id}${nsfw}` : '#');
     return `<a class="wl-card" href="${href}">
       <div class="wl-cover-wrap">
         <img class="wl-cover" src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
