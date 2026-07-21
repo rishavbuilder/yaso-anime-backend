@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Details — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main" id="mainContent"><div class="loading" style="padding:120px 0;">Loading...</div></main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+applyTranslations();
+const params = new URLSearchParams(location.search);
+const id = params.get('id');
+const slug = params.get('slug');
+const main = document.getElementById('mainContent');
+
+const COUNTRY_MAP = { JP:t('Japan'), CN:t('China'), KR:t('South Korea'), TW:t('Taiwan') };
+const RELATION_ORDER = ['SEQUEL','PREQUEL','SIDE_STORY','ALTERNATIVE','SPIN_OFF','ADAPTATION','SOURCE','COMPANION','CHARACTER','SUMMARY','OTHER'];
+const RELATION_LABEL = { SEQUEL:t('Sequel'),PREQUEL:t('Prequel'),SIDE_STORY:t('Side Story'),ALTERNATIVE:t('Alternative'),SPIN_OFF:t('Spin Off'),ADAPTATION:t('Adaptation'),SOURCE:t('Source'),COMPANION:t('Companion'),CHARACTER:t('Character'),SUMMARY:t('Summary'),OTHER:t('Other') };
+
+function formatDate(ts) {
+  if (!ts) return '';
+  return new Date(ts * 1000).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+}
+
+function timeUntil(ts) {
+  if (!ts) return '';
+  const diff = ts * 1000 - Date.now();
+  if (diff <= 0) return 'Airing now';
+  const days = Math.floor(diff / 86400000);
+  const hrs = Math.floor((diff % 86400000) / 3600000);
+  if (days > 0) return `In ${days}d ${hrs}h`;
+  return `In ${hrs}h`;
+}
+
+async function loadDetail() {
+  try {
+    let a;
+    if (id) {
+      a = await fetchAnimeDetail(id);
+    } else if (slug) {
+      const titleFromSlug = slug.replace(/-[a-z0-9]{5}$/, '').replace(/-/g, ' ');
+      const results = await fetchAnilistSearch(titleFromSlug);
+      if (results && results.length) {
+        a = await fetchAnimeDetail(results[0].id);
+      } else {
+        throw new Error(t('Anime not found'));
+      }
+    } else {
+      throw new Error(t('No ID or slug provided'));
+    }
+    const desc = (a.description||'').replace(/<[^>]+>/g,'');
+    const genres = (a.genres||[]).map(g => typeof g === 'object' ? g.name : g);
+    const country = COUNTRY_MAP[a.country] || a.country || '';
+    const seasonLabel = a.season ? `${a.season.charAt(0)+a.season.slice(1).toLowerCase()} ${a.season_year||''}` : '';
+
+    let relationsHtml = '';
+    const rels = (a.relations||[]).sort((x,y) => {
+      const xi = RELATION_ORDER.indexOf(x.relation);
+      const yi = RELATION_ORDER.indexOf(y.relation);
+      return (xi===-1?99:xi) - (yi===-1?99:yi);
+    });
+    if (rels.length) {
+      relationsHtml = `<div class="detail-section">
+        <h3 class="detail-section-title">${t('Relations')}</h3>
+        <div class="rel-grid">${rels.map(r => `
+          <a class="rel-card" href="/details.html?id=${r.id}">
+            <img src="${r.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+            <div class="rel-info">
+              <div class="rel-type">${RELATION_LABEL[r.relation]||r.relation}</div>
+              <div class="rel-title">${r.title||''}</div>
+              ${r.format?`<div class="rel-format">${r.format.replace('_',' ')}</div>`:''}
+            </div>
+          </a>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    let staffHtml = '';
+    const staffList = a.staff||[];
+    if (staffList.length) {
+      staffHtml = `<div class="detail-section">
+        <h3 class="detail-section-title">${t('Staff')}</h3>
+        <div class="staff-grid">${staffList.map(s => `
+          <div class="staff-item">
+            <div class="staff-name">${s.name||''}</div>
+            <div class="staff-role">${s.role||''}</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    let studiosHtml = '';
+    const studios = a.studios||[];
+    if (studios.length) {
+      studiosHtml = `<div class="detail-section">
+        <h3 class="detail-section-title">${t('Studios')}</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${studios.map(s => `<span class="detail-tag">${s}</span>`).join('')}</div>
+      </div>`;
+    }
+
+    let rankingsHtml = '';
+    const ranks = a.rankings||[];
+    if (ranks.length) {
+      rankingsHtml = `<div class="detail-section">
+        <h3 class="detail-section-title">${t('Rankings')}</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">${ranks.map(r => `
+          <div class="rank-badge">
+            <span class="rank-num">#${r.rank}</span>
+            <span class="rank-ctx">${r.context||''} ${r.type==='RATED'?'★':''} ${r.year||''}</span>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+
+    let trailerHtml = '';
+    if (a.trailer && a.trailer.id) {
+      const ytUrl = a.trailer.site === 'youtube' ? `https://www.youtube.com/embed/${a.trailer.id}` : a.trailer.id;
+      trailerHtml = `<div class="detail-section">
+        <h3 class="detail-section-title">${t('Trailer')}</h3>
+        <div class="trailer-wrap"><iframe src="${ytUrl}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>
+      </div>`;
+    }
+
+    let nextAiringHtml = '';
+    if (a.next_airing && a.next_airing.airingAt) {
+      nextAiringHtml = `<div class="info-row" style="border-left:2px solid var(--shu);padding-left:8px;">
+        <span>${t('Next Episode')}</span>
+        <span style="color:var(--shu);text-align:right;">${t('Ep')} ${a.next_airing.episode}<br>${timeUntil(a.next_airing.airingAt)}<br><small style="color:var(--washi-dim);font-size:.6rem;">${formatDate(a.next_airing.airingAt)}</small></span>
+      </div>`;
+    }
+
+    let synonymsHtml = '';
+    const synonyms = (a.synonyms||[]).filter(s => s && s.length > 1);
+    if (synonyms.length) {
+      synonymsHtml = `<div class="info-row"><span>${t('Alt Titles')}</span><span style="font-size:.65rem;line-height:1.5;text-align:right;max-width:160px;">${synonyms.slice(0,3).join(', ')}</span></div>`;
+    }
+
+    const fromSchedule = document.referrer.includes('schedule.html');
+    const breadPrefix = fromSchedule ? `<a href="/schedule.html">${t('Schedule')}</a> / ` : `<a href="/">${t('Home')}</a> / `;
+    main.innerHTML = `
+      <div class="breadcrumb" style="padding:80px 5vw 0">${breadPrefix}<span>${a.title||''}</span></div>
+      <div style="width:100%;overflow:hidden"><img class="detail-banner" src="${a.banner||a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'"></div>
+      <div class="detail-wrap">
+        <img class="detail-cover" src="${a.cover||''}" alt="">
+        <div class="detail-info">
+          <div class="detail-title">${a.title||''}</div>
+          ${a.title_romaji?`<div class="detail-subtitle"><span>${a.title_romaji}</span></div>`:''}
+          ${a.title_native?`<div class="detail-subtitle"><span style="color:var(--gold);">${a.title_native}</span></div>`:''}
+          <div class="detail-tags">
+            ${a.score?`<span class="detail-tag score">★ ${a.score}%</span>`:''}
+            ${a.popularity?`<span class="detail-tag">♥ ${Number(a.popularity).toLocaleString()}</span>`:''}
+            ${seasonLabel?`<span class="detail-tag">${seasonLabel}</span>`:''}
+            ${genres.slice(0,5).map(g=>`<span class="detail-tag">${g}</span>`).join('')}
+            ${a.format?`<span class="detail-tag">${a.format.replace('_',' ')}</span>`:''}
+            ${a.status?`<span class="detail-tag">${a.status.replace('_',' ')}</span>`:''}
+            ${country?`<span class="detail-tag">${country}</span>`:''}
+          </div>
+          <div class="detail-actions">
+            ${slug ? `<a class="btn" href="/watch.html?slug=${encodeURIComponent(slug)}&ep=1"><span>${t('▶ Watch')}</span></a>` : `<a class="btn" href="/watch.html?id=${a.id}&ep=1"><span>${t('▶ Watch')}</span></a>`}
+            <button class="detail-list-btn${isInWatchlist(a.id)?' active':''}" onclick="handleDetailWatchlist(this)" data-id="${a.id}" data-slug="${encodeURIComponent(slug||'')}" data-title="${(a.title||'').replace(/"/g,'&quot;')}" data-cover="${(a.cover||'').replace(/"/g,'&quot;')}" data-format="${(a.format||'').replace(/"/g,'&quot;')}" data-score="${a.score||''}"><span>${isInWatchlist(a.id)?'♥ '+t('In My List'):'♡ '+t('Add to List')}</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div>
+          ${desc?`<div class="detail-section"><h3 class="detail-section-title">${t('Synopsis')}</h3><p style="color:var(--washi-dim);line-height:1.8;">${desc}</p></div>`:''}
+          ${studiosHtml}
+          ${relationsHtml}
+          ${staffHtml}
+          ${rankingsHtml}
+          ${trailerHtml}
+        </div>
+        <div>
+          <div class="info-box">
+            <div class="info-box-title">${t('Information')}</div>
+            ${a.source?`<div class="info-row"><span>${t('Source')}</span><span>${a.source.replace('_',' ')}</span></div>`:''}
+            ${a.episodes?`<div class="info-row"><span>${t('Episodes')}</span><span>${a.episodes}</span></div>`:''}
+            ${a.duration?`<div class="info-row"><span>${t('Duration')}</span><span>${a.duration} ${t('min')}</span></div>`:''}
+            ${a.status?`<div class="info-row"><span>${t('Status')}</span><span>${a.status.replace('_',' ')}</span></div>`:''}
+            ${seasonLabel?`<div class="info-row"><span>${t('Season')}</span><span>${seasonLabel}</span></div>`:''}
+            ${country?`<div class="info-row"><span>${t('Country')}</span><span>${country}</span></div>`:''}
+            ${nextAiringHtml}
+            ${synonymsHtml}
+          </div>
+          ${genres.length?`<div class="info-box"><div class="info-box-title">${t('Genres')}</div><div style="display:flex;gap:6px;flex-wrap:wrap;">${genres.map(g=>`<span style="font-size:.68rem;padding:4px 10px;border:1px solid var(--line);color:var(--washi-dim);">${g}</span>`).join('')}</div></div>`:''}
+        </div>
+      </div>`;
+  } catch(e) {
+    main.innerHTML = `<div class="loading" style="padding:120px 0;">${t('Failed to load anime details')}</div>`;
+  }
+}
+loadDetail();
+
+function handleDetailWatchlist(btn) {
+  const anime = {
+    id: Number(btn.dataset.id),
+    slug: decodeURIComponent(btn.dataset.slug),
+    title: btn.dataset.title,
+    cover: btn.dataset.cover,
+    format: btn.dataset.format,
+    score: btn.dataset.score ? Number(btn.dataset.score) : null
+  };
+  const added = toggleWatchlist(anime);
+  btn.className = 'detail-list-btn' + (added ? ' active' : '');
+  btn.querySelector('span').textContent = added ? '♥ '+t('In My List') : '♡ '+t('Add to List');
+}
+</script>
+</body>
+</html>

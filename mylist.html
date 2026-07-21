@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>My List — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section style="padding-top:80px">
+    <div class="breadcrumb" style="padding:0 5vw"><a href="/" data-i18n="Home">Home</a> / <span data-i18n="My List">My List</span></div>
+    <div style="padding:0 5vw">
+      <div class="section-head"><div><div class="section-title" data-i18n="My List">My List</div><div class="section-sub" data-i18n-sub="マイリスト|||Your Anime">マイリスト — Your Anime</div></div><div class="kanji-mark">棚</div></div>
+      <div id="mylistGrid" class="mylist-grid"></div>
+      <div id="mylistEmpty" class="mylist-empty" style="display:none;">
+        <div class="mylist-empty-icon">♡</div>
+        <div class="mylist-empty-title" data-i18n="Your list is empty">Your list is empty</div>
+        <div class="mylist-empty-sub" data-i18n="Browse anime and click &quot;Add to List&quot; to save your favorites here.">Browse anime and click "Add to List" to save your favorites here.</div>
+        <a class="btn" href="/browse" style="margin-top:20px;"><span data-i18n="Browse Anime">Browse Anime</span></a>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+applyTranslations();
+const items = getWatchlist();
+if (!items.length) {
+  document.getElementById('mylistEmpty').style.display = '';
+} else {
+  document.getElementById('mylistGrid').innerHTML = items.map(a => {
+    const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}` : (a.id ? `/details.html?id=${a.id}` : '#');
+    return `<a class="wl-card-lg" href="${href}">
+      <img class="wl-card-lg-cover" src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+      <button class="wl-remove-btn" onclick="event.preventDefault();event.stopPropagation();removeFromWatchlist(${a.id});location.reload();" title="${t('Remove from list')}">✕</button>
+      <div class="wl-card-lg-info">
+        <div class="wl-card-lg-title">${a.title||''}</div>
+        <div class="wl-card-lg-meta">
+          ${a.score ? `<span>★ ${a.score}%</span>` : ''}
+          ${a.format ? `<span>${a.format}</span>` : ''}
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0,user-scalable=yes">
+<meta name="theme-color" content="#050505">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Reader — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=20">
+</head>
+<body class="reader-body">
+<div class="grain"></div>
+
+<header class="reader-header" id="readerHeader">
+  <div class="reader-h-left">
+    <a class="reader-back" id="readerBack" title="Back">←</a>
+    <div class="reader-title-wrap">
+      <div class="reader-title" id="readerTitle">Loading...</div>
+      <div class="reader-subtitle" id="readerSubtitle"></div>
+    </div>
+  </div>
+  <div class="reader-h-right">
+    <button class="reader-icon-btn" id="chDrawerBtn" title="Chapters">☰</button>
+    <button class="reader-icon-btn" id="settingsBtn" title="Settings">⚙</button>
+    <button class="reader-icon-btn" id="fsToggle" title="Fullscreen">⛶</button>
+  </div>
+</header>
+
+<div class="reader-container" id="readerContainer">
+  <div class="reader-loading" id="readerLoading">
+    <div class="reader-loader-ring"></div>
+    <div class="reader-loader-text">Loading pages...</div>
+  </div>
+  <div class="reader-scroll" id="readerScroll"></div>
+  <div class="reader-paged" id="readerPaged" style="display:none;">
+    <div class="reader-page-wrap" id="pageWrap">
+      <img class="reader-page-img" id="pageImg" src="" alt="">
+    </div>
+    <div class="reader-page-overlay" id="pageOverlay">
+      <div class="reader-tap-zone reader-tap-left" id="tapLeft"></div>
+      <div class="reader-tap-zone reader-tap-right" id="tapRight"></div>
+    </div>
+  </div>
+  <div class="reader-webtoon" id="readerWebtoon" style="display:none;"></div>
+</div>
+
+<footer class="reader-footer" id="readerFooter">
+  <div class="reader-progress-bar"><div class="reader-progress-fill" id="progressFill"></div></div>
+  <div class="reader-footer-inner">
+    <button class="reader-nav-btn reader-nav-prev" id="prevChapter" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>Prev</span>
+    </button>
+    <div class="reader-page-info" id="pageInfo">Page 0 / 0</div>
+    <button class="reader-nav-btn reader-nav-next" id="nextChapter">
+      <span>Next</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</footer>
+
+<div class="reader-drawer-backdrop" id="chDrawerBackdrop"></div>
+<div class="reader-drawer" id="chDrawer">
+  <div class="reader-drawer-head">
+    <div class="reader-drawer-title">Chapters</div>
+    <button class="reader-drawer-close" id="chDrawerClose">✕</button>
+  </div>
+  <div class="reader-drawer-list" id="chDrawerList"></div>
+</div>
+
+<div class="reader-settings-backdrop" id="settingsBackdrop"></div>
+<div class="reader-settings" id="settingsPanel">
+  <div class="reader-settings-head">
+    <div class="reader-settings-title">Reader Settings</div>
+    <button class="reader-drawer-close" id="settingsClose">✕</button>
+  </div>
+  <div class="reader-settings-body">
+    <div class="reader-setting-group">
+      <div class="reader-setting-label">Reading Mode</div>
+      <div class="reader-setting-options" id="modeOptions">
+        <button class="reader-opt-btn active" data-mode="scroll">Scroll</button>
+        <button class="reader-opt-btn" data-mode="paged">Paged</button>
+        <button class="reader-opt-btn" data-mode="webtoon">Webtoon</button>
+      </div>
+    </div>
+    <div class="reader-setting-group">
+      <div class="reader-setting-label">Reading Direction</div>
+      <div class="reader-setting-options" id="dirOptions">
+        <button class="reader-opt-btn active" data-dir="ltr">Left → Right</button>
+        <button class="reader-opt-btn" data-dir="rtl">Right ← Left</button>
+      </div>
+    </div>
+    <div class="reader-setting-group">
+      <div class="reader-setting-label">Page Zoom</div>
+      <div class="reader-zoom-row">
+        <input type="range" class="reader-zoom-slider" id="zoomSlider" min="50" max="200" value="100" step="5">
+        <span class="reader-zoom-val" id="zoomVal">100%</span>
+      </div>
+    </div>
+    <div class="reader-setting-group">
+      <div class="reader-setting-label">Data Saver</div>
+      <label class="reader-toggle">
+        <input type="checkbox" id="dataSaverToggle">
+        <span class="reader-toggle-slider"></span>
+      </label>
+    </div>
+    <div class="reader-setting-group">
+      <div class="reader-setting-label">Preload Pages</div>
+      <label class="reader-toggle">
+        <input type="checkbox" id="preloadToggle" checked>
+        <span class="reader-toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="reader-shortcuts-overlay" id="shortcutsOverlay" style="display:none;">
+  <div class="reader-shortcuts-card">
+    <div class="reader-shortcuts-title">Keyboard Shortcuts</div>
+    <div class="reader-shortcuts-grid">
+      <div class="reader-shortcut-row"><kbd>←</kbd><span>Previous page</span></div>
+      <div class="reader-shortcut-row"><kbd>→</kbd><span>Next page</span></div>
+      <div class="reader-shortcut-row"><kbd>Space</kbd><span>Next page</span></div>
+      <div class="reader-shortcut-row"><kbd>F</kbd><span>Fullscreen</span></div>
+      <div class="reader-shortcut-row"><kbd>M</kbd><span>Cycle reading mode</span></div>
+      <div class="reader-shortcut-row"><kbd>R</kbd><span>Toggle RTL</span></div>
+      <div class="reader-shortcut-row"><kbd>Esc</kbd><span>Back to manga</span></div>
+      <div class="reader-shortcut-row"><kbd>?</kbd><span>Show shortcuts</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="/data.js?v=7"></script><script src="/site.js?v=10"></script>
+<script>
+(function(){
+const params = new URLSearchParams(location.search);
+const chapterId = params.get('chapterId');
+const mangaId = params.get('mangaId');
+const currentCh = parseFloat(params.get('ch') || '0');
+
+let pages = [];
+let pagesSaver = [];
+let currentPage = 0;
+let allChapters = [];
+let currentChapterIndex = 0;
+let isRTL = false;
+let readingMode = 'scroll';
+let dataSaver = false;
+let preloadEnabled = true;
+let zoomLevel = 100;
+let controlsVisible = true;
+let lastScrollY = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let isSwiping = false;
+let preloadImages = [];
+
+function init() {
+  const loading = document.getElementById('readerLoading');
+  if (!chapterId) { loading.innerHTML = '<div class="reader-loader-text">No chapter ID provided</div>'; return; }
+  document.getElementById('readerBack').href = mangaId ? '/manga-detail.html?id=' + mangaId : '/manga.html';
+  loadSettings();
+  loadChapter();
+}
+
+async function loadChapter() {
+  const loading = document.getElementById('readerLoading');
+  loading.style.display = 'flex';
+  loading.querySelector('.reader-loader-text').textContent = 'Loading pages...';
+  try {
+    const chapData = await api('/api/manga/chapter/' + chapterId);
+    pages = chapData.pages || [];
+    pagesSaver = chapData.pagesSaver || [];
+    document.getElementById('readerTitle').textContent = 'Ch. ' + currentCh;
+    document.getElementById('readerSubtitle').textContent = pages.length + ' pages';
+    loading.style.display = 'none';
+
+    if (mangaId) {
+      try {
+        const chData = await api('/api/manga/' + mangaId + '/chapters');
+        allChapters = chData.chapters || [];
+        currentChapterIndex = allChapters.findIndex(c => c.id === chapterId);
+        const chTitle = allChapters[currentChapterIndex] && allChapters[currentChapterIndex].title;
+        document.getElementById('readerTitle').textContent = chTitle || 'Ch. ' + currentCh;
+      } catch(e) {}
+    }
+
+    updateNavButtons();
+    renderChapterDrawer();
+    renderPages();
+    saveMangaProgress();
+  } catch(e) {
+    loading.querySelector('.reader-loader-text').textContent = 'Failed to load chapter';
+  }
+}
+
+function loadSettings() {
+  readingMode = localStorage.getItem('kaa_reader_mode') || 'scroll';
+  isRTL = localStorage.getItem('kaa_reader_rtl') === 'true';
+  zoomLevel = parseInt(localStorage.getItem('kaa_reader_zoom') || '100');
+  dataSaver = localStorage.getItem('kaa_reader_datasaver') === 'true';
+  preloadEnabled = localStorage.getItem('kaa_reader_preload') !== 'false';
+  applySettingsUI();
+}
+
+function applySettingsUI() {
+  document.querySelectorAll('#modeOptions .reader-opt-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.mode === readingMode); });
+  document.querySelectorAll('#dirOptions .reader-opt-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.dir === (isRTL ? 'rtl' : 'ltr')); });
+  document.getElementById('zoomSlider').value = zoomLevel;
+  document.getElementById('zoomVal').textContent = zoomLevel + '%';
+  document.getElementById('dataSaverToggle').checked = dataSaver;
+  document.getElementById('preloadToggle').checked = preloadEnabled;
+}
+
+function getImageUrl(idx) { return '/api/manga/proxy?chapterId=' + chapterId + '&page=' + idx; }
+
+function renderPages() {
+  if (readingMode === 'scroll') renderScrollMode();
+  else if (readingMode === 'paged') renderPagedMode();
+  else if (readingMode === 'webtoon') renderWebtoonMode();
+}
+
+function renderScrollMode() {
+  hide('readerPaged'); hide('readerWebtoon'); show('readerScroll');
+  var scroll = document.getElementById('readerScroll');
+  var pArr = dataSaver ? pagesSaver : pages;
+  scroll.innerHTML = '<div class="reader-scroll-inner" style="max-width:' + zoomLevel + '%">' +
+    pArr.map(function(_, i) {
+      return '<div class="reader-scroll-page" data-page="' + i + '">' +
+        '<img class="reader-scroll-img" data-page="' + i + '" src="' + getImageUrl(i) + '" alt="Page ' + (i+1) + '" loading="lazy">' +
+      '</div>';
+    }).join('') + '</div>';
+  document.getElementById('pageInfo').textContent = pArr.length + ' pages';
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var idx = parseInt(entry.target.dataset.page);
+        if (!isNaN(idx)) { currentPage = idx; updateProgress(); saveMangaProgress(); }
+      }
+    });
+  }, { threshold: 0.5 });
+  scroll.querySelectorAll('.reader-scroll-page').forEach(function(el) { observer.observe(el); });
+}
+
+function renderPagedMode() {
+  hide('readerScroll'); hide('readerWebtoon'); show('readerPaged');
+  applyZoom();
+  showPage(currentPage);
+}
+
+function renderWebtoonMode() {
+  hide('readerScroll'); hide('readerPaged'); show('readerWebtoon');
+  var webtoon = document.getElementById('readerWebtoon');
+  var pArr = dataSaver ? pagesSaver : pages;
+  webtoon.innerHTML = '<div class="reader-webtoon-inner" style="max-width:' + zoomLevel + '%">' +
+    pArr.map(function(_, i) {
+      return '<div class="reader-webtoon-page" data-page="' + i + '">' +
+        '<img class="reader-webtoon-img" src="' + getImageUrl(i) + '" alt="Page ' + (i+1) + '" loading="lazy">' +
+      '</div>';
+    }).join('') + '</div>';
+  document.getElementById('pageInfo').textContent = pArr.length + ' pages';
+
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        var idx = parseInt(entry.target.dataset.page);
+        if (!isNaN(idx)) { currentPage = idx; updateProgress(); saveMangaProgress(); }
+      }
+    });
+  }, { threshold: 0.3 });
+  webtoon.querySelectorAll('.reader-webtoon-page').forEach(function(el) { observer.observe(el); });
+}
+
+function showPage(idx) {
+  var pArr = dataSaver ? pagesSaver : pages;
+  if (idx < 0 || idx >= pArr.length) return;
+  currentPage = idx;
+  var img = document.getElementById('pageImg');
+  img.style.opacity = '0';
+  img.src = getImageUrl(idx);
+  img.onload = function() { img.style.opacity = '1'; };
+  updateProgress();
+  saveMangaProgress();
+  preloadNearby(idx);
+}
+
+function updateProgress() {
+  var pArr = dataSaver ? pagesSaver : pages;
+  document.getElementById('progressFill').style.width = ((currentPage + 1) / pArr.length * 100) + '%';
+  document.getElementById('pageInfo').textContent = 'Page ' + (currentPage + 1) + ' / ' + pArr.length;
+}
+
+function applyZoom() {
+  if (readingMode === 'paged') {
+    document.getElementById('pageWrap').style.maxWidth = zoomLevel + '%';
+  } else if (readingMode === 'webtoon') {
+    var inner = document.querySelector('.reader-webtoon-inner');
+    if (inner) inner.style.maxWidth = zoomLevel + '%';
+  }
+}
+
+function preloadNearby(idx) {
+  if (!preloadEnabled) return;
+  preloadImages.forEach(function(img) { img.src = ''; });
+  preloadImages = [];
+  var pArr = dataSaver ? pagesSaver : pages;
+  for (var i = idx + 1; i <= Math.min(idx + 3, pArr.length - 1); i++) {
+    var img = new Image();
+    img.src = getImageUrl(i);
+    preloadImages.push(img);
+  }
+}
+
+function chapterUrl(ch) {
+  return '/reader.html?chapterId=' + ch.id + '&mangaId=' + mangaId + '&ch=' + (ch.chapter || '');
+}
+
+function updateNavButtons() {
+  document.getElementById('prevChapter').disabled = currentChapterIndex >= allChapters.length - 1;
+  document.getElementById('nextChapter').disabled = currentChapterIndex <= 0;
+}
+
+document.getElementById('prevChapter').addEventListener('click', function() {
+  if (currentChapterIndex < allChapters.length - 1) location.href = chapterUrl(allChapters[currentChapterIndex + 1]);
+});
+document.getElementById('nextChapter').addEventListener('click', function() {
+  if (currentChapterIndex > 0) location.href = chapterUrl(allChapters[currentChapterIndex - 1]);
+});
+
+function renderChapterDrawer() {
+  var el = document.getElementById('chDrawerList');
+  var readChs = [];
+  try { readChs = JSON.parse(localStorage.getItem('kaa_manga_history') || '{}')[mangaId] || []; } catch(e) {}
+
+  el.innerHTML = allChapters.map(function(c, i) {
+    var isCurrent = i === currentChapterIndex;
+    var isRead = readChs.includes(c.chapter);
+    var chLabel = c.chapter ? 'Ch. ' + c.chapter : 'Oneshot';
+    return '<div class="reader-ch-item' + (isCurrent ? ' active' : '') + (isRead ? ' read' : '') + '" data-idx="' + i + '">' +
+      '<div class="reader-ch-num">' + chLabel + '</div>' +
+      '<div class="reader-ch-meta">' + (c.title || '') + (c.group ? ' · ' + c.group : '') + '</div>' +
+    '</div>';
+  }).join('');
+
+  el.querySelectorAll('.reader-ch-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      var idx = parseInt(item.dataset.idx);
+      if (allChapters[idx]) { closeDrawers(); location.href = chapterUrl(allChapters[idx]); }
+    });
+  });
+}
+
+document.getElementById('settingsBtn').addEventListener('click', function() {
+  closeDrawers();
+  document.getElementById('settingsPanel').classList.add('open');
+  document.getElementById('settingsBackdrop').classList.add('open');
+});
+document.getElementById('settingsClose').addEventListener('click', closeDrawers);
+document.getElementById('settingsBackdrop').addEventListener('click', closeDrawers);
+
+document.getElementById('chDrawerBtn').addEventListener('click', function() {
+  closeDrawers();
+  document.getElementById('chDrawer').classList.add('open');
+  document.getElementById('chDrawerBackdrop').classList.add('open');
+  var active = document.querySelector('.reader-ch-item.active');
+  if (active) active.scrollIntoView({ block: 'center' });
+});
+document.getElementById('chDrawerClose').addEventListener('click', closeDrawers);
+document.getElementById('chDrawerBackdrop').addEventListener('click', closeDrawers);
+
+function closeDrawers() {
+  document.getElementById('chDrawer').classList.remove('open');
+  document.getElementById('chDrawerBackdrop').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
+  document.getElementById('settingsBackdrop').classList.remove('open');
+}
+
+document.getElementById('modeOptions').addEventListener('click', function(e) {
+  var btn = e.target.closest('.reader-opt-btn');
+  if (!btn) return;
+  readingMode = btn.dataset.mode;
+  localStorage.setItem('kaa_reader_mode', readingMode);
+  applySettingsUI();
+  renderPages();
+  saveMangaProgress();
+});
+
+document.getElementById('dirOptions').addEventListener('click', function(e) {
+  var btn = e.target.closest('.reader-opt-btn');
+  if (!btn) return;
+  isRTL = btn.dataset.dir === 'rtl';
+  localStorage.setItem('kaa_reader_rtl', isRTL);
+  applySettingsUI();
+});
+
+document.getElementById('zoomSlider').addEventListener('input', function(e) {
+  zoomLevel = parseInt(e.target.value);
+  document.getElementById('zoomVal').textContent = zoomLevel + '%';
+  localStorage.setItem('kaa_reader_zoom', zoomLevel);
+  applyZoom();
+  var inner = document.querySelector('.reader-scroll-inner');
+  if (inner) inner.style.maxWidth = zoomLevel + '%';
+});
+
+document.getElementById('dataSaverToggle').addEventListener('change', function(e) {
+  dataSaver = e.target.checked;
+  localStorage.setItem('kaa_reader_datasaver', dataSaver);
+  renderPages();
+  saveMangaProgress();
+});
+
+document.getElementById('preloadToggle').addEventListener('change', function(e) {
+  preloadEnabled = e.target.checked;
+  localStorage.setItem('kaa_reader_preload', preloadEnabled);
+});
+
+var scrollTimer = null;
+function onScroll() {
+  var y = window.scrollY;
+  var delta = y - lastScrollY;
+  if (Math.abs(delta) < 5) return;
+  if (delta > 0 && y > 80 && controlsVisible) hideControls();
+  else if (delta < 0 && !controlsVisible) showControls();
+  lastScrollY = y;
+}
+
+function hideControls() {
+  controlsVisible = false;
+  document.getElementById('readerHeader').classList.add('hidden');
+  document.getElementById('readerFooter').classList.add('hidden');
+}
+
+function showControls() {
+  controlsVisible = true;
+  document.getElementById('readerHeader').classList.remove('hidden');
+  document.getElementById('readerFooter').classList.remove('hidden');
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(function() {
+    if (window.scrollY > 100 && readingMode !== 'paged') hideControls();
+  }, 3000);
+}
+
+document.addEventListener('scroll', onScroll, { passive: true });
+
+document.addEventListener('click', function(e) {
+  if (readingMode === 'paged') return;
+  if (e.target.closest('.reader-header') || e.target.closest('.reader-footer') || e.target.closest('.reader-drawer') || e.target.closest('.reader-settings') || e.target.closest('.reader-drawer-backdrop') || e.target.closest('.reader-settings-backdrop')) return;
+  if (controlsVisible) hideControls();
+  else showControls();
+});
+
+document.getElementById('pageWrap').addEventListener('click', function(e) {
+  if (readingMode !== 'paged') return;
+  var rect = e.currentTarget.getBoundingClientRect();
+  var clickX = e.clientX - rect.left;
+  var third = rect.width / 3;
+  var pArr = dataSaver ? pagesSaver : pages;
+  if (isRTL) {
+    if (clickX < third) { if (currentPage < pArr.length - 1) showPage(currentPage + 1); }
+    else if (clickX > rect.width * 2 / 3) { if (currentPage > 0) showPage(currentPage - 1); }
+  } else {
+    if (clickX < third) { if (currentPage > 0) showPage(currentPage - 1); }
+    else if (clickX > rect.width * 2 / 3) { if (currentPage < pArr.length - 1) showPage(currentPage + 1); }
+  }
+});
+
+document.addEventListener('touchstart', function(e) {
+  if (readingMode !== 'paged') return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = Date.now();
+  isSwiping = false;
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+  if (readingMode !== 'paged') return;
+  var dx = Math.abs(e.touches[0].clientX - touchStartX);
+  var dy = Math.abs(e.touches[0].clientY - touchStartY);
+  if (dx > 15 && dx > dy * 1.5) isSwiping = true;
+}, { passive: true });
+
+document.addEventListener('touchend', function(e) {
+  if (readingMode !== 'paged' || !isSwiping) return;
+  var dx = e.changedTouches[0].clientX - touchStartX;
+  var dt = Date.now() - touchStartTime;
+  if (dt > 500) return;
+  var pArr = dataSaver ? pagesSaver : pages;
+  if (isRTL) {
+    if (dx < -40 && currentPage > 0) showPage(currentPage - 1);
+    else if (dx > 40 && currentPage < pArr.length - 1) showPage(currentPage + 1);
+  } else {
+    if (dx > 40 && currentPage > 0) showPage(currentPage - 1);
+    else if (dx < -40 && currentPage < pArr.length - 1) showPage(currentPage + 1);
+  }
+}, { passive: true });
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  var pArr = dataSaver ? pagesSaver : pages;
+  if (readingMode === 'paged') {
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (currentPage < pArr.length - 1) showPage(currentPage + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); if (currentPage > 0) showPage(currentPage - 1); }
+    else if (e.key === ' ') { e.preventDefault(); if (currentPage < pArr.length - 1) showPage(currentPage + 1); }
+  }
+  if (e.key === 'Escape') { closeDrawers(); location.href = document.getElementById('readerBack').href; }
+  if (e.key === 'f' || e.key === 'F') { if (!e.ctrlKey && !e.metaKey) toggleFullscreen(); }
+  if (e.key === 'm' || e.key === 'M') cycleMode();
+  if (e.key === 'r' || e.key === 'R') toggleRTL();
+  if (e.key === '?') toggleShortcuts();
+});
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+function cycleMode() {
+  var modes = ['scroll', 'paged', 'webtoon'];
+  var idx = modes.indexOf(readingMode);
+  readingMode = modes[(idx + 1) % modes.length];
+  localStorage.setItem('kaa_reader_mode', readingMode);
+  applySettingsUI();
+  renderPages();
+  saveMangaProgress();
+}
+
+function toggleRTL() {
+  isRTL = !isRTL;
+  localStorage.setItem('kaa_reader_rtl', isRTL);
+  applySettingsUI();
+}
+
+function toggleShortcuts() {
+  var el = document.getElementById('shortcutsOverlay');
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+document.getElementById('shortcutsOverlay').addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
+
+document.getElementById('fsToggle').addEventListener('click', toggleFullscreen);
+
+function saveMangaProgress() {
+  if (!mangaId || !chapterId) return;
+  var pArr = dataSaver ? pagesSaver : pages;
+  var reading = [];
+  try { reading = JSON.parse(localStorage.getItem('kaa_manga_reading') || '[]'); } catch(e) {}
+  reading = reading.filter(function(r) { return r.mangaId !== mangaId; });
+  reading.unshift({ mangaId: mangaId, chapterId: chapterId, chapterNum: currentCh, page: currentPage, totalPages: pArr.length, lastRead: Date.now() });
+  if (reading.length > 20) reading.length = 20;
+  localStorage.setItem('kaa_manga_reading', JSON.stringify(reading));
+
+  var history = {};
+  try { history = JSON.parse(localStorage.getItem('kaa_manga_history') || '{}'); } catch(e) {}
+  if (!history[mangaId]) history[mangaId] = [];
+  if (!history[mangaId].includes(currentCh)) history[mangaId].push(currentCh);
+  localStorage.setItem('kaa_manga_history', JSON.stringify(history));
+}
+
+function show(id) { document.getElementById(id).style.display = ''; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+init();
+})();
+</script>
+</body>
+</html>

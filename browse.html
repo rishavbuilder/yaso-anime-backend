@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Browse — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="section-head"><div><div class="section-title" data-i18n="Browse">Browse</div><div class="section-sub" data-i18n-sub="一覧|||All Anime">一覧 — All Anime</div></div><div class="kanji-mark">覧</div></div>
+
+    <div class="browse-filters">
+      <select id="filterGenre" class="browse-select">
+        <option value="" data-i18n="All Genres">All Genres</option>
+      </select>
+      <select id="filterType" class="browse-select">
+        <option value="" data-i18n="All Types">All Types</option>
+      </select>
+    </div>
+
+    <div class="browse-genre-tabs" id="genreTabs"></div>
+
+    <div id="resultCount" style="font-family:var(--font-m);font-size:.72rem;color:var(--washi-dim);margin:16px 0;"></div>
+    <div class="browse-grid" id="browseGrid"><div class="loading">Loading...</div></div>
+    <div class="browse-pagination" id="pagination"></div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+applyTranslations();
+
+let state = { mode: 'latest', genre: '', type: '', page: 1, totalPages: 1 };
+
+async function init() {
+  const [genresData, typesData] = await Promise.all([fetchBrowseGenres(), fetchBrowseTypes()]);
+  renderGenreDropdown(genresData.genres || []);
+  renderTypeDropdown(typesData.types || []);
+  renderGenreTabs(genresData.genres || []);
+  loadBrowse();
+}
+
+function renderGenreDropdown(genres) {
+  const el = document.getElementById('filterGenre');
+  el.innerHTML = `<option value="">${t('All Genres')}</option>` +
+    genres.map(g => `<option value="${g.slug}">${g.name}</option>`).join('');
+  el.onchange = () => { state.genre = el.value; state.page = 1; clearActiveGenreTab(); loadBrowse(); };
+}
+
+function renderTypeDropdown(types) {
+  const el = document.getElementById('filterType');
+  el.innerHTML = `<option value="">${t('All Types')}</option>` +
+    types.map(t => `<option value="${t.slug}">${t.name}</option>`).join('');
+  el.onchange = () => { state.type = el.value; state.page = 1; loadBrowse(); };
+}
+
+function renderGenreTabs(genres) {
+  const el = document.getElementById('genreTabs');
+  el.innerHTML = `<button class="browse-genre-chip active" data-genre="">${t('All')}</button>` +
+    genres.map(g =>
+      `<button class="browse-genre-chip" data-genre="${g.slug}">${g.name}</button>`
+    ).join('');
+  el.querySelectorAll('.browse-genre-chip').forEach(btn => {
+    btn.onclick = () => {
+      const wasActive = btn.classList.contains('active');
+      clearActiveGenreTab();
+      if (!btn.dataset.genre) {
+        state.genre = '';
+        document.getElementById('filterGenre').value = '';
+      } else {
+        btn.classList.add('active');
+        state.genre = btn.dataset.genre;
+        document.getElementById('filterGenre').value = btn.dataset.genre;
+      }
+      state.page = 1;
+      loadBrowse();
+    };
+  });
+}
+
+function clearActiveGenreTab() {
+  document.querySelectorAll('.browse-genre-chip').forEach(c => c.classList.remove('active'));
+}
+
+async function loadBrowse() {
+  const grid = document.getElementById('browseGrid');
+  grid.innerHTML = `<div class="loading">${t('Loading...')}</div>`;
+  document.getElementById('pagination').innerHTML = '';
+
+  try {
+    let data;
+    if (state.genre) {
+      data = await fetchBrowseGenre(state.genre, state.page);
+    } else if (state.type) {
+      data = await fetchBrowseType(state.type, state.page);
+    } else {
+      data = await fetchBrowseCategory('latest', state.page);
+    }
+
+    state.totalPages = data.total_pages || 1;
+    const items = data.results || [];
+    document.getElementById('resultCount').textContent = items.length + ' ' + t('anime found');
+
+    if (!items.length) {
+      grid.innerHTML = `<div class="loading">${t('No anime found')}</div>`;
+      return;
+    }
+    grid.innerHTML = items.map(a => renderAnikotoCard(a)).join('');
+    renderPagination();
+  } catch(e) {
+    grid.innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
+  }
+}
+
+function renderPagination() {
+  const el = document.getElementById('pagination');
+  if (state.totalPages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button class="browse-page-btn" onclick="goPage(${state.page - 1})" ${state.page <= 1 ? 'disabled' : ''}>${t('← Prev')}</button>
+    <span class="browse-page-info">${t('Page')} ${state.page} / ${state.totalPages}</span>
+    <button class="browse-page-btn" onclick="goPage(${state.page + 1})" ${state.page >= state.totalPages ? 'disabled' : ''}>${t('Next →')}</button>`;
+}
+
+function goPage(p) {
+  if (p < 1 || p > state.totalPages) return;
+  state.page = p;
+  loadBrowse();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+init();
+</script>
+</body>
+</html>

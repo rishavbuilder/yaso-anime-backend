@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Trending — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="breadcrumb" style="padding:80px 5vw 0"><a href="/">Home</a> / <span id="pageTitle"></span></div>
+    <div style="padding:0 5vw">
+      <div class="section-head"><div><div class="section-title" id="pageTitle2"></div><div class="section-sub">トレンド — Popular Right Now</div></div><div class="kanji-mark">炎</div></div>
+      <div class="browse-grid" id="trendingGrid"><div class="loading">Loading...</div></div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+document.getElementById('pageTitle').textContent = t('Trending');
+document.getElementById('pageTitle2').textContent = t('Trending');
+async function load() {
+  try {
+    const items = await fetchTrending();
+    document.getElementById('trendingGrid').innerHTML = items.map(a => renderCard(a)).join('');
+    document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+  } catch(e) {
+    document.getElementById('trendingGrid').innerHTML = '<div class="loading">Failed to load</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

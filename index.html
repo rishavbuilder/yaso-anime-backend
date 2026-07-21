@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>夜想 YASŌ — Night Anime Archive</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub" data-i18n="Night Archive">Night Archive</div>
+</div>
+<div class="grain"></div>
+<div class="petals" id="petals"></div>
+<header id="site-header"></header>
+
+<main class="main">
+  <section class="hero">
+    <div class="hero-bg" style="background-image:url('/public/journey-through-bamboo-forest.jpg')"></div>
+    <div class="hero-content">
+      <div class="eyebrow" data-i18n-sub="Season 06|||Now Streaming">Season 06 — Now Streaming</div>
+      <h1>夜想アーカイブ<small data-i18n="The Archive Watches After Midnight">The Archive Watches After Midnight</small></h1>
+      <p class="tag" data-i18n="A curated night-shift of anime, hand-stamped by our editors. No algorithms — just stories worth staying up for.">A curated night-shift of anime, hand-stamped by our editors. No algorithms — just stories worth staying up for.</p>
+    </div>
+    <div class="scroll-cue"><span data-i18n="SCROLL">SCROLL</span><span class="line"></span></div>
+  </section>
+
+  <section id="continueSection" style="display:none"><div class="section-head reveal"><div><div class="section-title" data-i18n="Continue Watching">Continue Watching</div><div class="section-sub" data-i18n-sub="続きから|||Pick Up Where You Left Off">続きから — Pick Up Where You Left Off</div></div><div class="kanji-mark">続</div></div><div id="continueRail"></div></section>
+
+  <section id="trendingSection"><div class="section-head reveal"><div><div class="section-title" data-i18n="Now Streaming">Now Streaming</div><div class="section-sub" data-i18n-sub="今宵の配信|||Tonight's Selection">今宵の配信 — Tonight's Selection</div></div><div class="kanji-mark">配</div></div><div id="trendingRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+
+  <section id="latestSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Latest Episodes">Latest Episodes</div><div class="section-sub" data-i18n-sub="最新エピソード|||Just Aired">最新エピソード — Just Aired</div></div><div class="kanji-mark">新</div></div><div id="latestRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+
+  <section id="upcomingSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Upcoming Anime">Upcoming Anime</div><div class="section-sub" data-i18n-sub="近日公開|||Coming Soon">近日公開 — Coming Soon</div></div><div class="kanji-mark">次</div></div><div id="upcomingRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+
+  <section id="newReleaseSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="New Releases">New Releases</div><div class="section-sub" data-i18n-sub="新作アニメ|||Fresh This Season">新作アニメ — Fresh This Season</div></div><div class="kanji-mark">発</div></div><div id="newReleaseRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+
+  <section id="newAddedSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="New Added">New Added</div><div class="section-sub" data-i18n-sub="新規追加|||Recently Added">新規追加 — Recently Added</div></div><div class="kanji-mark">追</div></div><div id="newAddedRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+
+  <section id="completedSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Just Completed">Just Completed</div><div class="section-sub" data-i18n-sub="完結|||Finished">完結 — Finished</div></div><div class="kanji-mark">完</div></div><div id="completedRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+
+  <svg class="brush reveal" viewBox="0 0 1000 60" preserveAspectRatio="none"><path d="M10 30 C 250 5, 450 55, 700 25 S 950 15, 990 32"/></svg>
+
+  <section id="genresSection"><div class="section-head reveal"><div><div class="section-title" data-i18n="Browse by Feeling">Browse by Feeling</div><div class="section-sub" data-i18n-sub="感情で選ぶ|||Choose By Emotion">感情で選ぶ — Choose By Emotion</div></div><div class="kanji-mark">感</div></div><div class="genres-grid reveal" id="genresGrid"></div></section>
+
+  <section class="cta reveal">
+    <h2 data-i18n="Stay Up One More Episode">Stay Up One More Episode</h2>
+    <p data-i18n="New reels are stamped into the archive every night at 24:00.">New reels are stamped into the archive every night at 24:00.</p>
+    <a class="btn" href="/browse"><span data-i18n="Enter the Archive">Enter the Archive</span></a>
+  </section>
+</main>
+
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+applyTranslations();
+
+const cwItems = getContinueWatching();
+if (cwItems.length) {
+  document.getElementById('continueSection').style.display = '';
+  document.getElementById('continueRail').innerHTML = renderContinueWatching(cwItems);
+}
+
+document.getElementById('genresGrid').innerHTML = GENRES.map(g =>
+  `<div class="genre-card" href="/genre.html?g=${g.id}"><div class="kj">${g.kj}</div><div class="en">${getLang() === 'ja' ? g.name.ja : g.name.en}</div></div>`
+).join('');
+document.querySelectorAll('.genre-card').forEach(el => {
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', () => location.href = el.getAttribute('href'));
+});
+
+fetchTrending().then(items => {
+  document.getElementById('trendingRail').innerHTML = renderSpotlight(items.results || items);
+  document.querySelectorAll('#trendingRail .card, #trendingRail .spotlight-main, #trendingRail .sp-card').forEach(el => cardObserver.observe(el));
+}).catch(() => {
+  document.getElementById('trendingRail').innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
+});
+
+function loadSection(fetchFn, railId, renderFn, sliceN) {
+  fetchFn().then(data => {
+    const items = (data.results || data || []).slice(0, sliceN || 12);
+    document.getElementById(railId).innerHTML = renderFn(items);
+    document.querySelectorAll('#' + railId + ' .card, #' + railId + ' .p-card, #' + railId + ' .d-item, #' + railId + ' .bento-main, #' + railId + ' .bento-sm, #' + railId + ' .c-card, #' + railId + ' .tl-item').forEach(el => cardObserver.observe(el));
+  }).catch(() => {
+    document.getElementById(railId).innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
+  });
+}
+
+loadSection(fetchAnikotoRecent, 'latestRail', renderPortraitRail, 12);
+loadSection(fetchAnikotoUpcoming, 'upcomingRail', renderDateList, 8);
+loadSection(fetchAnikotoNewRelease, 'newReleaseRail', renderBento, 5);
+loadSection(fetchAnikotoNewAdded, 'newAddedRail', renderCompactGrid, 12);
+loadSection(fetchAnikotoCompleted, 'completedRail', renderTimeline, 8);
+</script>
+</body>
+</html>

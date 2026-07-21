@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Manga — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=30">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">漫</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Manga Detail</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main" id="mainContent">
+  <div class="md-skeleton">
+    <div class="md-sk-banner"><div class="sk-shimmer"></div></div>
+    <div class="md-sk-hero">
+      <div class="md-sk-cover sk-shimmer"></div>
+      <div class="md-sk-info">
+        <div class="md-sk-title sk-shimmer"></div>
+        <div class="md-sk-sub sk-shimmer"></div>
+        <div class="md-sk-tags"><div class="sk-shimmer"></div><div class="sk-shimmer"></div><div class="sk-shimmer"></div></div>
+        <div class="md-sk-btn sk-shimmer"></div>
+      </div>
+    </div>
+    <div class="md-sk-grid">
+      <div class="md-sk-sidebar">
+        <div class="md-sk-box sk-shimmer"></div>
+        <div class="md-sk-box sk-shimmer"></div>
+        <div class="md-sk-box sk-shimmer"></div>
+      </div>
+      <div class="md-sk-main">
+        <div class="md-sk-toolbar sk-shimmer"></div>
+        <div class="md-sk-ch sk-shimmer"></div>
+        <div class="md-sk-ch sk-shimmer"></div>
+        <div class="md-sk-ch sk-shimmer"></div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=10"></script>
+<script>
+initSite();
+applyTranslations();
+
+const mangaId = new URLSearchParams(location.search).get('id');
+const main = document.getElementById('mainContent');
+let allChapters = [];
+let allGroups = [];
+let activeGroup = 'all';
+let sortDesc = true;
+let chapterSearch = '';
+let activeTab = 'chapters';
+let mangaData = null;
+
+const LANG_FLAGS = {en:'\u{1F1EC}\u{1F1E7}',ja:'\u{1F1EF}\u{1F1F5}',ko:'\u{1F1F0}\u{1F1F7}',zh:'\u{1F1E8}\u{1F1F3}',es:'\u{1F1EA}\u{1F1F8}',fr:'\u{1F1EB}\u{1F1F7}',de:'\u{1F1E9}\u{1F1EA}',pt:'\u{1F1E7}\u{1F1F7}',ru:'\u{1F1F7}\u{1F1FA}',ar:'\u{1F1F8}\u{1F1E6}',id:'\u{1F1EE}\u{1F1E9}',th:'\u{1F1F9}\u{1F1ED}',vi:'\u{1F1FB}\u{1F1F3}',pl:'\u{1F1F5}\u{1F1F1}',it:'\u{1F1EE}\u{1F1F9}',tr:'\u{1F1F9}\u{1F1F7}'};
+const GROUP_COLORS = ['#dc3545','#e67e22','#2ecc71','#3498db','#9b59b6','#1abc9c','#e74c3c','#f39c12','#16a085','#8e44ad'];
+const STATUS_MAP = {ongoing:'ongoing',completed:'completed','hiatus':'hiatus',cancelled:'cancelled'};
+
+async function init() {
+  if (!mangaId) { main.innerHTML = '<div class="loading" style="padding:120px 0;">No manga ID provided</div>'; return; }
+  try {
+    const [detail, chapData, recData] = await Promise.all([
+      api('/api/manga/' + mangaId),
+      api('/api/manga/' + mangaId + '/chapters'),
+      api('/api/manga/' + mangaId + '/recommended').catch(() => ({results:[]})),
+    ]);
+    allChapters = chapData.chapters || [];
+    mangaData = detail;
+    renderDetail(detail, allChapters, recData.results || []);
+  } catch(e) {
+    main.innerHTML = '<div class="loading" style="padding:120px 0;">Failed to load manga. <a href="/manga.html" style="color:var(--shu)">Go back</a></div>';
+  }
+}
+
+function groupByVolume(chapters) {
+  const vols = {};
+  chapters.forEach(c => {
+    const v = c.volume || '';
+    const vKey = v || '__none__';
+    if (!vols[vKey]) vols[vKey] = { volume: v, chapters: {} };
+    const chKey = c.chapter || 'oneshot';
+    if (!vols[vKey].chapters[chKey]) vols[vKey].chapters[chKey] = { chapter: c.chapter, title: c.title || '', entries: [] };
+    vols[vKey].chapters[chKey].entries.push(c);
+  });
+  return Object.values(vols);
+}
+
+function buildGroups(chapters) {
+  const map = {};
+  chapters.forEach(c => {
+    if (c.group_id && !map[c.group_id]) {
+      map[c.group_id] = { id: c.group_id, name: c.group || 'Unknown', color: GROUP_COLORS[Object.keys(map).length % GROUP_COLORS.length] };
+    }
+  });
+  return Object.values(map);
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 0) return 'upcoming';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  const months = Math.floor(days / 30);
+  if (months < 12) return months + 'mo ago';
+  const years = Math.floor(months / 12);
+  return years + 'y ago';
+}
+
+function getReadChapters(mid) {
+  try {
+    const reading = JSON.parse(localStorage.getItem('kaa_manga_reading') || '[]');
+    const entry = reading.find(r => r.mangaId === mid);
+    return entry ? entry.chapter : null;
+  } catch(e) { return null; }
+}
+
+function getStatusClass(status) {
+  return STATUS_MAP[(status||'').toLowerCase()] || 'unknown';
+}
+
+function renderDetail(m, chapters, recs) {
+  document.title = m.title + ' \u2014 YAS\u014D';
+  const desc = (m.synopsis || '').replace(/<[^>]+>/g, '');
+  const genres = m.genres || [];
+  const lastReadCh = getReadChapters(mangaId);
+  allGroups = buildGroups(chapters);
+  const totalChapters = groupByVolume(chapters).reduce((sum, v) => sum + Object.keys(v.chapters).length, 0);
+
+  const sortedChs = [...chapters].sort((a,b) => {
+    const na = parseFloat(a.chapter) || 0;
+    const nb = parseFloat(b.chapter) || 0;
+    return na - nb;
+  });
+  const firstCh = sortedChs.length ? sortedChs[0] : null;
+
+  let lastChData = null;
+  if (lastReadCh) {
+    lastChData = chapters.find(c => c.chapter === String(lastReadCh)) || null;
+  }
+
+  const statusCls = getStatusClass(m.status);
+
+  let recsHtml = '';
+  if (recs.length) {
+    recsHtml = recs.map(r => `
+      <a class="md-recs-card" href="/manga-detail.html?id=${r.id}">
+        <div class="md-recs-cover"><img src="${r.cover}" alt="${r.title}" loading="lazy" onerror="this.parentElement.classList.add('md-recs-fallback')"></div>
+        <div class="md-recs-info">
+          <div class="md-recs-name">${r.title}</div>
+          <div class="md-recs-type">${r.type}</div>
+        </div>
+      </a>`).join('');
+  }
+
+  let altHtml = '';
+  if (m.alt_titles && m.alt_titles.length) {
+    altHtml = m.alt_titles.slice(0, 8).map(t => '<div class="md-alt-title">' + t + '</div>').join('');
+  }
+
+  const heroGenres = genres.slice(0, 8);
+  const extraGenres = genres.length > 8 ? genres.length - 8 : 0;
+
+  main.innerHTML = `
+    <div class="md-banner-wrap">
+      <img class="md-banner-img" src="${m.cover || ''}" alt="" onerror="this.style.display='none'">
+      <div class="md-banner-overlay"></div>
+    </div>
+
+    <div class="md-top">
+      <a class="md-bread" href="/manga.html">Manga</a>
+      <span class="md-bread-sep">/</span>
+      <span class="md-bread-cur">${m.title}</span>
+    </div>
+
+    <div class="md-hero">
+      <img class="md-cover" src="${m.cover || ''}" alt="${m.title}" onerror="this.classList.add('md-cover-err')">
+      <div class="md-hero-info">
+        <h1 class="md-hero-title">${m.title}</h1>
+        ${m.alt_titles && m.alt_titles.length ? '<div class="md-hero-native">' + m.alt_titles[0] + '</div>' : ''}
+        ${m.authors && m.authors.length ? '<div class="md-author-line">by <a href="#">' + m.authors.join(', ') + '</a></div>' : ''}
+        <div class="md-hero-actions">
+          ${firstCh ? '<a class="btn btn-primary md-btn-primary" href="/reader.html?chapterId=' + firstCh.id + '&mangaId=' + mangaId + '&ch=' + firstCh.chapter + '"><span>\u25B6 Read Ch. ' + (firstCh.chapter || '1') + '</span></a>' : ''}
+          ${lastChData && lastChData.chapter !== (firstCh ? firstCh.chapter : '') ? '<a class="btn btn-primary md-btn-primary" href="/reader.html?chapterId=' + lastChData.id + '&mangaId=' + mangaId + '&ch=' + lastChData.chapter + '"><span>\u{1F4D6} Continue Ch. ' + lastChData.chapter + '</span></a>' : ''}
+          <button class="md-icon-btn" title="Bookmark">\u{1F516}</button>
+          <button class="md-icon-btn" title="Flag">\u{1F6A9}</button>
+          <button class="md-icon-btn" title="Share" onclick="navigator.clipboard.writeText(location.href).then(()=>this.textContent='\u2713')">\u{1F4E4}</button>
+        </div>
+        <div class="md-hero-tags">
+          ${heroGenres.map(g => '<span class="md-tag">' + g + '</span>').join('')}
+          ${extraGenres ? '<span class="md-tag md-tag-plus">+' + extraGenres + '</span>' : ''}
+          <span class="md-status-dot ' + statusCls + '"></span>
+          <span class="md-status-text">${m.type || 'Manga'} \u00B7 ${(m.status || 'Unknown')} ${m.year ? '\u00B7 ' + m.year : ''} ${totalChapters ? '\u00B7 ' + totalChapters + ' chapters' : ''}</span>
+        </div>
+        <div class="md-hero-meta">
+          <span>\u2B50 N/A</span>
+          <span>\u{1F4D6} N/A</span>
+          <span>\u{1F4AC} N/A</span>
+          <span>\u{1F441}\uFE0F N/A</span>
+        </div>
+      </div>
+    </div>
+
+    ${desc ? '<div class="md-desc"><div class="md-desc-inner">' + desc + '</div></div>' : ''}
+
+    <div class="md-tabs-bar">
+      <button class="md-tab active" data-tab="chapters" onclick="switchTab('chapters')">Chapters</button>
+      <button class="md-tab" data-tab="recommendations" onclick="switchTab('recommendations')">Recommendations</button>
+    </div>
+
+    <div class="md-content-grid" id="tabChapters">
+      <aside class="md-meta-col">
+        ${m.authors && m.authors.length ? '<div class="md-meta-box"><div class="md-meta-label">Author</div><div class="md-meta-people">' + m.authors.map(a => '<span class="md-meta-person">' + a + '</span>').join('') + '</div></div>' : ''}
+        ${genres.length ? '<div class="md-meta-box"><div class="md-meta-label">Genres</div><div class="md-meta-tags">' + genres.map(g => '<span class="md-meta-tag">' + g + '</span>').join('') + '</div></div>' : ''}
+        ${altHtml ? '<div class="md-meta-box"><div class="md-meta-label">Alternative Titles</div><div class="md-alt-list">' + altHtml + '</div></div>' : ''}
+        ${recs.length ? '<div class="md-meta-box"><div class="md-section-title">Recommendations</div><div class="md-recs-grid">' + recsHtml + '</div></div>' : ''}
+      </aside>
+
+      <div class="md-chapter-col">
+        <div class="md-chapter-toolbar" id="chapterToolbar">
+          <div class="md-toolbar-left">
+            ${allGroups.length ? '<div class="md-group-filters"><button class="md-gf-btn active" data-gid="all" onclick="filterGroup(\x27all\x27)">All</button>' + allGroups.map(g => '<button class="md-gf-btn" data-gid="' + g.id + '" onclick="filterGroup(\x27' + g.id + '\x27)"><span class="md-gf-dot" style="background:' + g.color + '"></span>' + g.name + '</button>').join('') + '</div>' : ''}
+          </div>
+          <div class="md-toolbar-right">
+            <div class="md-ch-search-wrap"><input type="text" class="md-ch-search" id="chSearch" placeholder="Ch. #" oninput="searchChapter(this.value)"></div>
+            <button class="md-sort-btn" onclick="toggleSort()"><span id="sortIcon">\u2193</span> Desc</button>
+          </div>
+        </div>
+        <div id="chapterSection"></div>
+      </div>
+    </div>
+
+    <div class="md-tab-content" id="tabRecommendations">
+      <div style="max-width:1280px;margin:0 auto;padding:20px 5vw 60px;">
+        <div class="md-section-title">Recommendations</div>
+        ${recs.length ? '<div class="md-recs-grid" style="grid-template-columns:repeat(4,1fr);">' + recsHtml + '</div>' : '<div style="padding:40px 0;text-align:center;color:var(--washi-dim);font-size:.82rem;">No recommendations available</div>'}
+      </div>
+    </div>`;
+
+  renderChapters();
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.md-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tabChapters').style.display = tab === 'chapters' ? '' : 'none';
+  document.getElementById('tabRecommendations').style.display = tab === 'recommendations' ? '' : 'none';
+}
+
+function renderChapters() {
+  let filtered = allChapters;
+  if (activeGroup !== 'all') {
+    filtered = allChapters.filter(c => c.group_id === activeGroup);
+  }
+  if (chapterSearch) {
+    const q = chapterSearch.toLowerCase();
+    filtered = filtered.filter(c => (c.chapter || '').toLowerCase().includes(q) || (c.title || '').toLowerCase().includes(q));
+  }
+  if (!sortDesc) filtered = [...filtered].reverse();
+
+  const grouped = groupByVolume(filtered);
+  const el = document.getElementById('chapterSection');
+  if (!grouped.length) {
+    el.innerHTML = '<div class="md-ch-empty">No chapters available</div>';
+    return;
+  }
+
+  const lastReadCh = getReadChapters(mangaId);
+
+  el.innerHTML = grouped.map(vol => {
+    const chKeys = Object.keys(vol.chapters);
+    const totalCh = chKeys.length;
+    const volLabel = vol.volume ? 'Volume ' + vol.volume : 'No Volume';
+    const volRange = chKeys.length > 1 ? 'Ch. ' + chKeys[0] + ' \u2013 ' + chKeys[chKeys.length - 1] : (chKeys[0] === 'oneshot' ? 'Oneshot' : 'Ch. ' + chKeys[0]);
+
+    const chRows = chKeys.map(chKey => {
+      const g = vol.chapters[chKey];
+      const chLabel = g.chapter ? 'Ch. ' + g.chapter : 'Oneshot';
+      const isRead = lastReadCh && g.chapter && parseFloat(g.chapter) <= parseFloat(lastReadCh);
+
+      const rows = g.entries.map(c => {
+        const grp = allGroups.find(gr => gr.id === c.group_id);
+        const grpColor = grp ? grp.color : '#666';
+        const flag = LANG_FLAGS[c.lang] || '\u{1F310}';
+        const time = timeAgo(c.publishAt);
+        if (c.external) {
+          const host = (() => { try { return new URL(c.external).hostname.replace('www.',''); } catch(e) { return 'Official'; } })();
+          return '<div class="md-ch-row external"><div class="md-ch-left"><span class="md-ch-flag">' + flag + '</span><span class="md-ch-num">' + chLabel + '</span><div class="md-ch-title">' + (c.title || '') + '</div></div><div class="md-ch-right"><span class="md-ch-ext-badge">Official</span><a class="md-ch-host" href="' + c.external + '" target="_blank" rel="noopener">\u2197 ' + host + '</a><span class="md-ch-time">' + time + '</span></div></div>';
+        }
+        return '<a class="md-ch-row' + (isRead ? ' md-ch-read-row' : '') + '" href="/reader.html?chapterId=' + c.id + '&mangaId=' + mangaId + '&ch=' + c.chapter + '"><div class="md-ch-left"><span class="md-ch-flag">' + flag + '</span><span class="md-ch-num">' + chLabel + '</span><div class="md-ch-title">' + (c.title || '') + '</div></div><div class="md-ch-right"><span class="md-ch-grp-label"><span class="md-gf-dot" style="background:' + grpColor + '"></span>' + (c.group || '') + '</span><span class="md-ch-time">' + time + '</span></div></a>';
+      }).join('');
+
+      return '<div class="md-ch-group' + (isRead ? ' md-ch-read' : '') + '"><div class="md-ch-group-head" onclick="this.parentElement.classList.toggle(\'collapsed\')"><span class="md-ch-group-label">' + chLabel + '</span><span class="md-ch-group-count">' + g.entries.length + '</span><span class="md-ch-group-arrow">\u25BE</span></div><div class="md-ch-group-body">' + rows + '</div></div>';
+    }).join('');
+
+    return '<div class="md-vol-group"><div class="md-vol-header" onclick="this.parentElement.classList.toggle(\'collapsed\')"><div class="md-vol-left"><span class="md-vol-name">' + volLabel + '</span><span class="md-vol-range">' + volRange + '</span></div><div class="md-vol-right"><span class="md-vol-count">' + totalCh + ' chapters</span><span class="md-vol-arrow">\u25BE</span></div></div><div class="md-vol-chs">' + chRows + '</div></div>';
+  }).join('');
+}
+
+function filterGroup(gid) {
+  activeGroup = gid;
+  document.querySelectorAll('.md-gf-btn').forEach(b => b.classList.toggle('active', b.dataset.gid === gid));
+  renderChapters();
+}
+
+function toggleSort() {
+  sortDesc = !sortDesc;
+  document.getElementById('sortIcon').textContent = sortDesc ? '\u2193' : '\u2191';
+  renderChapters();
+}
+
+function searchChapter(val) {
+  chapterSearch = val.trim();
+  renderChapters();
+}
+
+init();
+</script>
+</body>
+</html>

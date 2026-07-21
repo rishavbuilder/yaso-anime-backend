@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Manga — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=12">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">漫画</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Manga Reader</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="section-head"><div><div class="section-title" data-i18n="Manga">Manga</div><div class="section-sub" data-i18n-sub="漫画|||Browse Manga">漫画 — Browse Manga</div></div><div class="kanji-mark">漫</div></div>
+
+    <div class="manga-filters">
+      <div class="manga-search-wrap">
+        <input class="manga-search-input" type="text" id="mangaSearch" placeholder="Search manga, manhwa..." autocomplete="off">
+        <button class="manga-search-btn" id="mangaSearchBtn">⌕</button>
+      </div>
+      <div class="manga-type-tabs" id="typeTabs">
+        <button class="manga-type-chip active" data-lang="">All</button>
+        <button class="manga-type-chip" data-lang="ja">Manga</button>
+        <button class="manga-type-chip" data-lang="ko">Manhwa</button>
+        <button class="manga-type-chip" data-lang="zh">Manhua</button>
+      </div>
+    </div>
+
+    <div id="mangaResultCount" style="font-family:var(--font-m);font-size:.72rem;color:var(--washi-dim);margin:16px 0;"></div>
+    <div class="browse-grid" id="mangaGrid"><div class="loading">Loading...</div></div>
+    <div class="browse-pagination" id="mangaPagination"></div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=10"></script>
+<script>
+initSite();
+applyTranslations();
+
+let mangaState = { query: '', origLang: '', page: 1, totalPages: 1 };
+let searchTimer = null;
+
+document.getElementById('mangaSearch').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    mangaState.query = this.value.trim();
+    mangaState.page = 1;
+    loadManga();
+  }, 400);
+});
+document.getElementById('mangaSearchBtn').addEventListener('click', () => {
+  mangaState.query = document.getElementById('mangaSearch').value.trim();
+  mangaState.page = 1;
+  loadManga();
+});
+
+document.querySelectorAll('.manga-type-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.manga-type-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    mangaState.origLang = btn.dataset.lang;
+    mangaState.page = 1;
+    loadManga();
+  });
+});
+
+async function loadManga() {
+  const grid = document.getElementById('mangaGrid');
+  grid.innerHTML = `<div class="loading">${t('Loading...')}</div>`;
+  document.getElementById('mangaPagination').innerHTML = '';
+  try {
+    const data = await api('/api/manga/search?q=' + encodeURIComponent(mangaState.query) + '&page=' + mangaState.page + (mangaState.origLang ? '&orig_lang=' + mangaState.origLang : ''));
+    mangaState.totalPages = data.total_pages || 1;
+    const items = data.results || [];
+    document.getElementById('mangaResultCount').textContent = items.length + ' ' + t('manga found');
+    if (!items.length) {
+      grid.innerHTML = `<div class="loading">${t('No manga found')}</div>`;
+      return;
+    }
+    grid.innerHTML = items.map(a => renderMangaCard(a)).join('');
+    renderMangaPagination();
+  } catch(e) {
+    grid.innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
+  }
+}
+
+function renderMangaCard(m) {
+  const href = `/manga-detail.html?id=${m.id}`;
+  const typeClass = m.type === 'Manhwa' ? 'manhwa' : m.type === 'Manhua' ? 'manhua' : 'manga';
+  return `<div class="bc" onclick="location.href='${href}'">
+    <div class="bc-front">
+      <img class="bc-art" src="${m.cover || ''}" alt="${m.title}" onerror="this.style.background='var(--night-soft)'">
+      <div class="bc-gradient"></div>
+      ${m.type ? `<div class="bc-fmt">${m.type}</div>` : ''}
+      <div class="bc-title-overlay">${m.title || ''}</div>
+    </div>
+    <div class="bc-back">
+      <div class="bcb-title">${m.title || ''}</div>
+      <div class="bcb-meta">
+        ${m.type ? `<span>${m.type}</span>` : ''}
+        ${m.status ? `<span>${m.status}</span>` : ''}
+        ${m.year ? `<span>${m.year}</span>` : ''}
+      </div>
+      <div class="bcb-genres">${(m.tags||[]).slice(0, 3).map(g => '<span>' + g + '</span>').join('')}</div>
+      <div class="bcb-actions">
+        <a class="bcb-btn bcb-btn-details" href="${href}">${t('details →')}</a>
+        <a class="bcb-btn bcb-btn-watch" href="${href}">${t('Read Now')}</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderMangaPagination() {
+  const el = document.getElementById('mangaPagination');
+  if (mangaState.totalPages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button class="browse-page-btn" onclick="goMangaPage(${mangaState.page - 1})" ${mangaState.page <= 1 ? 'disabled' : ''}>${t('← Prev')}</button>
+    <span class="browse-page-info">${t('Page')} ${mangaState.page} / ${mangaState.totalPages}</span>
+    <button class="browse-page-btn" onclick="goMangaPage(${mangaState.page + 1})" ${mangaState.page >= mangaState.totalPages ? 'disabled' : ''}>${t('Next →')}</button>`;
+}
+
+function goMangaPage(p) {
+  if (p < 1 || p > mangaState.totalPages) return;
+  mangaState.page = p;
+  loadManga();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+loadManga();
+</script>
+</body>
+</html>

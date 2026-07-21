@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Search — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="breadcrumb" style="padding:80px 5vw 0"><a href="/">Home</a> / <span id="searchLabel">Search</span></div>
+    <div style="padding:0 5vw">
+      <div class="section-head"><div><div class="section-title" id="searchTitle">Search</div><div class="section-sub">検索結果 — Search Results</div></div><div class="kanji-mark">捜</div></div>
+      <input class="browse-input" id="searchInput" placeholder="Search Anime..." style="max-width:360px;margin-bottom:24px;">
+      <div class="browse-grid" id="searchGrid"><div class="loading">Loading...</div></div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+const params = new URLSearchParams(location.search);
+const q = params.get('q') || '';
+const input = document.getElementById('searchInput');
+input.value = q;
+
+async function doSearch(val) {
+  if (!val || val.length < 2) {
+    document.getElementById('searchGrid').innerHTML = '<div class="loading">Type at least 2 characters</div>';
+    return;
+  }
+  document.getElementById('searchTitle').textContent = `"${val}"`;
+  try {
+    const results = await fetchSearch(val);
+    const grid = document.getElementById('searchGrid');
+    if (!results.length) { grid.innerHTML = '<div class="loading">No results found</div>'; return; }
+    grid.innerHTML = results.map(a => renderCard(a)).join('');
+    grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+  } catch(e) {
+    document.getElementById('searchGrid').innerHTML = '<div class="loading">Search failed</div>';
+  }
+}
+
+input.addEventListener('input', e => { clearTimeout(SITE.searchTimer); SITE.searchTimer = setTimeout(() => doSearch(e.target.value.trim()), 400); });
+input.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(input.value.trim()); });
+if (q) doSearch(q);
+</script>
+</body>
+</html>

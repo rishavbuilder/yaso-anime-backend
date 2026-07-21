@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Genre — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="breadcrumb" style="padding:80px 5vw 0"><a href="/">Home</a> / <span id="genreLabel">Genre</span></div>
+    <div style="padding:0 5vw">
+      <div class="section-head" id="genreHead"></div>
+      <div id="genreChips" style="margin-bottom:20px;"></div>
+      <div class="browse-grid" id="genreGrid"><div class="loading">Loading...</div></div>
+      <div id="genrePag" style="display:flex;gap:10px;margin-top:24px;justify-content:center;"></div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+const ALL_GENRES = ['Action','Adventure','Comedy','Drama','Fantasy','Horror','Mystery','Romance','Sci-Fi','Slice of Life','Sports','Supernatural','Psychological','Music'];
+const params = new URLSearchParams(location.search);
+let gName = params.get('g') || '';
+let gPage = 1;
+
+document.getElementById('genreChips').innerHTML = ALL_GENRES.map(g =>
+  `<a href="#" onclick="pickGenre('${g}');return false;" style="display:inline-block;font-size:.68rem;padding:5px 14px;border:1px solid ${g===gName?'var(--gold)':'var(--line)'};color:${g===gName?'var(--gold)':'var(--washi-dim)'};cursor:pointer;font-family:var(--font-m);letter-spacing:.06em;margin:0 4px 6px 0;transition:all .2s;">${g}</a>`
+).join('');
+
+function pickGenre(g) { gName = g; gPage = 1; loadGenre(); }
+
+async function loadGenre() {
+  document.getElementById('genreLabel').textContent = gName || 'All Genres';
+  document.getElementById('genreHead').innerHTML = `<div><div class="section-title">${gName || 'All Genres'}</div><div class="section-sub">ジャンル — Genre</div></div><div class="kanji-mark">系</div>`;
+  document.getElementById('genreChips').innerHTML = ALL_GENRES.map(g =>
+    `<a href="#" onclick="pickGenre('${g}');return false;" style="display:inline-block;font-size:.68rem;padding:5px 14px;border:1px solid ${g===gName?'var(--gold)':'var(--line)'};color:${g===gName?'var(--gold)':'var(--washi-dim)'};cursor:pointer;font-family:var(--font-m);letter-spacing:.06em;margin:0 4px 6px 0;">${g}</a>`
+  ).join('');
+  const grid = document.getElementById('genreGrid');
+  grid.innerHTML = '<div class="loading">Loading...</div>';
+  try {
+    const data = await fetchBrowse(gName, '', 'POPULARITY_DESC', gPage);
+    const items = data.results || [];
+    if (!items.length) { grid.innerHTML = '<div class="loading">No anime found</div>'; document.getElementById('genrePag').innerHTML = ''; return; }
+    grid.innerHTML = items.map(a => renderCard(a)).join('');
+    grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+    let pagHtml = '';
+    if (gPage > 1) pagHtml += `<button class="btn" onclick="gPage=${gPage-1};loadGenre();" style="padding:10px 18px;font-size:.72rem;"><span>← Prev</span></button>`;
+    pagHtml += `<span style="font-family:var(--font-m);font-size:.72rem;color:var(--washi-dim);padding:10px;">Page ${gPage}</span>`;
+    if (data.has_next) pagHtml += `<button class="btn" onclick="gPage=${gPage+1};loadGenre();" style="padding:10px 18px;font-size:.72rem;"><span>Next →</span></button>`;
+    document.getElementById('genrePag').innerHTML = pagHtml;
+  } catch(e) { grid.innerHTML = '<div class="loading">Failed to load</div>'; }
+}
+loadGenre();
+</script>
+</body>
+</html>

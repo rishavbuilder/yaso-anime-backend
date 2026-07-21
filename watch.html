@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Watch — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section style="padding-top:80px">
+    <div class="breadcrumb" style="padding:0 5vw"><a href="/" data-i18n="Home">Home</a> / <a href="/details.html?id=" id="bcDetail"></a> / <span id="bcEp">...</span></div>
+    <div class="wk-layout">
+      <div class="wk-main">
+        <div class="wk-player" id="player"></div>
+        <div id="watchLoading" class="wk-loading" data-i18n="Finding stream...">Finding stream...</div>
+        <div id="watchError" style="display:none;padding:12px 16px;border:1px solid var(--shu);color:var(--shu);margin-bottom:16px;font-size:.82rem;"></div>
+        <div id="wkControls" class="wk-controls" style="display:none;"></div>
+        <div id="wkServers" class="wk-servers" style="display:none;"></div>
+        <div id="wkEpisodes" class="wk-episodes" style="display:none;"></div>
+        <div id="wkInfo" class="wk-info"></div>
+        <div id="wkSuggestions"></div>
+      </div>
+      <div class="wk-sidebar">
+        <div class="wk-side-head">
+          <span class="wk-side-label" data-i18n="Trending">Trending</span>
+        </div>
+        <div id="wkTrending" class="wk-trending-list"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+applyTranslations();
+const params = new URLSearchParams(location.search);
+const id = params.get('id');
+const slug = params.get('slug');
+const ep = Number(params.get('ep')) || 1;
+let hlsInstance = null;
+let autoPlayTimer = null;
+let animeDetail = null;
+let totalEps = 30;
+let currentSource = null;
+
+async function loadWatch() {
+  try {
+    if (id) {
+      animeDetail = await fetchAnimeDetail(id);
+    } else {
+      animeDetail = { title: (slug || '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), episodes: 30 };
+      try {
+        let searchTitle = animeDetail.title.replace(/\s+(\S+)$/, (m, w) => /\d/.test(w) && /[a-zA-Z]/.test(w) ? '' : '').trim();
+        let results = await fetchAnilistSearch(searchTitle);
+        if (!results.length) {
+          searchTitle = searchTitle.replace(/\s+Season\s+\d+$/i, '').trim();
+          results = await fetchAnilistSearch(searchTitle);
+        }
+        if (!results.length) {
+          searchTitle = searchTitle.replace(/\s+\S+$/, '').trim();
+          results = await fetchAnilistSearch(searchTitle);
+        }
+        if (results.length > 0) {
+          const full = await fetchAnimeDetail(results[0].id);
+          if (full) animeDetail = full;
+        }
+      } catch(_) {}
+    }
+    const title = animeDetail.title || '';
+    totalEps = animeDetail.episodes || 30;
+    document.getElementById('bcDetail').textContent = title;
+    document.getElementById('bcDetail').href = id ? '/details.html?id=' + id : (slug ? '/details.html?slug=' + encodeURIComponent(slug) : '#');
+    document.getElementById('bcEp').textContent = t('Episode') + ' ' + ep;
+
+    renderAnimeInfo();
+    renderSuggestions();
+    loadTrending();
+
+    const streamData = await fetchStream(title, ep, 'anikoto', slug || '');
+    document.getElementById('watchLoading').style.display = 'none';
+
+    currentSource = streamData.source || 'unknown';
+    const metaEps = (streamData.meta && streamData.meta.episodes) || 0;
+    if (metaEps && metaEps > 0) totalEps = metaEps;
+    renderServers(streamData.servers || []);
+    renderEpisodes();
+    renderControls();
+
+    if (streamData.master_url) loadHlsPlayer(streamData.master_url, streamData.embed_url);
+    else if (streamData.embed_url) loadIframePlayer(streamData.embed_url);
+
+  } catch(e) {
+    document.getElementById('watchLoading').style.display = 'none';
+    document.getElementById('watchError').textContent = t('Stream not found. ') + e.message;
+    document.getElementById('watchError').style.display = 'block';
+  }
+}
+
+function renderServers(servers) {
+  const el = document.getElementById('wkServers');
+  if (!servers.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  window._servers = servers;
+
+  const groups = {};
+  const typeOrder = ['SUB', 'DUB', 'OTHER'];
+  servers.forEach((s, i) => {
+    let type = 'OTHER';
+    const name = s.name || '';
+    if (/^HSUB|^SUB/i.test(name)) type = 'SUB';
+    else if (/^DUB/i.test(name)) type = 'DUB';
+    if (!groups[type]) groups[type] = [];
+    groups[type].push({ ...s, _idx: i });
+  });
+
+  const badgeLabels = { SUB: t('SUB'), DUB: t('DUB'), OTHER: t('SERVER') };
+  let html = '';
+  for (const type of typeOrder) {
+    if (!groups[type] || !groups[type].length) continue;
+    html += '<div class="wk-server-group">';
+    html += `<span class="wk-server-badge ${type.toLowerCase()}">${badgeLabels[type]}</span>`;
+    html += '<div class="wk-server-btns">';
+    for (const s of groups[type]) {
+      const cleanName = s.name.replace(/^(HSUB|SUB|DUB)\s*-\s*/i, '');
+      html += `<button class="wk-server-btn${s._idx === 0 ? ' active' : ''}" data-idx="${s._idx}" onclick="switchServer(${s._idx})">${cleanName}</button>`;
+    }
+    html += '</div></div>';
+  }
+  el.innerHTML = html;
+}
+
+function switchServer(idx) {
+  const servers = window._servers || [];
+  const srv = servers[idx];
+  if (!srv) return;
+  document.querySelectorAll('.wk-server-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.idx) === idx));
+  if (srv.url.includes('.m3u8') || srv.url.includes('.mp4')) loadHlsPlayer(srv.url);
+  else loadIframePlayer(srv.url);
+}
+
+function watchUrl(epNum) {
+  const p = [];
+  if (id) p.push('id=' + id);
+  if (slug) p.push('slug=' + slug);
+  p.push('ep=' + epNum);
+  return '/watch.html?' + p.join('&');
+}
+
+function getAutoPlay() { return localStorage.getItem('kaa_auto_next') !== 'off'; }
+function setAutoPlay(v) { localStorage.setItem('kaa_auto_next', v ? 'on' : 'off'); }
+
+function renderControls() {
+  const el = document.getElementById('wkControls');
+  el.style.display = 'flex';
+  const autoOn = getAutoPlay();
+  el.innerHTML = `
+    <div class="wk-ctrl-left">
+      <a class="wk-ctrl-btn${ep<=1?' disabled':''}" href="${watchUrl(Math.max(1,ep-1))}" ${ep<=1?'onclick="return false"':''}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5z"/></svg>
+        <span>Prev</span>
+      </a>
+      <span class="wk-ctrl-ep">${t('Ep')} ${ep} / ${totalEps}</span>
+      <a class="wk-ctrl-btn" href="${watchUrl(ep+1)}">
+        <span>Next</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4l10 8-10 8V4zM19 4h2v16h-2z"/></svg>
+      </a>
+    </div>
+    <div class="wk-ctrl-right">
+      <label class="wk-auto-toggle" title="${t('Auto-next episode')}">
+        <input type="checkbox" ${autoOn?'checked':''} onchange="setAutoPlay(this.checked)">
+        <span class="wk-auto-slider"></span>
+        <span class="wk-auto-label">${t('AUTO')}</span>
+      </label>
+      <button class="wk-ctrl-btn" onclick="showShortcuts()" title="${t('Keyboard shortcuts')}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+      </button>
+    </div>`;
+}
+
+function renderEpisodes() {
+  const el = document.getElementById('wkEpisodes');
+  el.style.display = 'block';
+  const eps = Array.from({length: totalEps}, (_, i) => i + 1);
+  let html = `<div class="wk-ep-head"><span class="wk-ep-head-label">${t('EPISODES')}</span><span class="wk-ep-head-total">${totalEps}</span></div>`;
+  html += '<div class="wk-ep-grid">';
+  for (const n of eps) {
+    html += `<a class="wk-ep-box${n===ep?' active':''}" href="${watchUrl(n)}">${n}</a>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+  const active = el.querySelector('.wk-ep-box.active');
+  if (active) active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function renderAnimeInfo() {
+  if (!animeDetail) return;
+  const a = animeDetail;
+  const genres = (a.genres||[]).slice(0,6).map(g => typeof g === 'string' ? g : (g && g.name) || '');
+  const desc = (a.description||'').replace(/<[^>]+>/g,'');
+  const shortDesc = desc.length > 400 ? desc.slice(0, 400) + '...' : desc;
+  const detailsHref = a.id ? '/details.html?id=' + a.id : (slug ? '/details.html?slug=' + encodeURIComponent(slug) : '#');
+  const inList = a.id ? isInWatchlist(a.id) : false;
+
+  document.getElementById('wkInfo').innerHTML = `
+    <div class="wk-info-inner">
+      <img class="wk-info-poster" src="${a.cover||''}" alt="" onerror="this.style.display='none'">
+      <div class="wk-info-text">
+        <a class="wk-info-title" href="${detailsHref}">${a.title||''}</a>
+        <div class="wk-info-meta">
+          ${a.score?`<span class="wk-info-score">★ ${a.score}%</span>`:''}
+          ${a.format?`<span>${a.format.replace('_',' ')}</span>`:''}
+          ${a.episodes?`<span>${a.episodes} eps</span>`:''}
+          ${a.status?`<span>${a.status.replace('_',' ')}</span>`:''}
+        </div>
+        <div class="wk-info-genres">${genres.map(g => `<a class="wk-info-genre" href="/browse.html?genre=${encodeURIComponent(g)}">${g}</a>`).join('')}</div>
+        <div class="wk-info-desc">${shortDesc}</div>
+        <div class="wk-info-actions">
+          <a class="btn" href="${detailsHref}" style="padding:8px 18px;font-size:.66rem;"><span>${t('View Details')} →</span></a>
+          ${a.id ? `<button class="wk-list-btn${inList?' active':''}" onclick="handleWatchlistToggle(this)" data-id="${a.id}" data-slug="${encodeURIComponent(slug||'')}" data-title="${(a.title||'').replace(/"/g,'&quot;')}" data-cover="${(a.cover||'').replace(/"/g,'&quot;')}" data-format="${(a.format||'').replace(/"/g,'&quot;')}" data-score="${a.score||''}">${inList ? '♥ '+t('In My List') : '♡ '+t('Add to List')}</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function handleWatchlistToggle(btn) {
+  const anime = {
+    id: Number(btn.dataset.id),
+    slug: decodeURIComponent(btn.dataset.slug),
+    title: btn.dataset.title,
+    cover: btn.dataset.cover,
+    format: btn.dataset.format,
+    score: btn.dataset.score ? Number(btn.dataset.score) : null
+  };
+  const added = toggleWatchlist(anime);
+  btn.className = 'wk-list-btn' + (added ? ' active' : '');
+  btn.textContent = added ? '♥ '+t('In My List') : '♡ '+t('Add to List');
+}
+
+const RELATION_LABEL = { SEQUEL:t('Sequel'),PREQUEL:t('Prequel'),SIDE_STORY:t('Side Story'),ALTERNATIVE:t('Alternative'),SPIN_OFF:t('Spin Off'),ADAPTATION:t('Adaptation'),SOURCE:t('Source'),COMPANION:t('Companion'),CHARACTER:t('Character'),SUMMARY:t('Summary'),OTHER:t('Other') };
+
+function renderSuggestionsRail(title, items, renderFn) {
+  if (!items || !items.length) return '';
+  return `<div class="wk-suggestions">
+    <div class="wk-suggestions-head">
+      <span class="wk-suggestions-title">${title}</span>
+      <div class="wk-suggestions-scroll-btns">
+        <button class="wsr-btn" onclick="this.closest('.wk-suggestions').querySelector('.wk-rail').scrollBy({left:-300,behavior:'smooth'})">←</button>
+        <button class="wsr-btn" onclick="this.closest('.wk-suggestions').querySelector('.wk-rail').scrollBy({left:300,behavior:'smooth'})">→</button>
+      </div>
+    </div>
+    <div class="wk-rail">${items.map(renderFn).join('')}</div>
+  </div>`;
+}
+
+function renderRelationCard(r) {
+  const href = r.id ? `/details.html?id=${r.id}` : '#';
+  return `<a class="wsr-card" href="${href}">
+    <img src="${r.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+    <div class="wsr-info">
+      <div class="wsr-type">${RELATION_LABEL[r.relation]||r.relation||''}</div>
+      <div class="wsr-title">${r.title||''}</div>
+    </div>
+  </a>`;
+}
+
+function renderRecommendationCard(r) {
+  const href = r.id ? `/details.html?id=${r.id}` : '#';
+  return `<a class="wsr-card" href="${href}">
+    <img src="${r.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+    <div class="wsr-info">
+      ${r.format ? `<div class="wsr-type">${r.format}</div>` : ''}
+      <div class="wsr-title">${r.title||''}</div>
+      ${r.score ? `<div class="wsr-score">★ ${r.score}%</div>` : ''}
+    </div>
+  </a>`;
+}
+
+function renderSimilarCard(a) {
+  const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}` : '#';
+  return `<a class="wsr-card" href="${href}">
+    <img src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+    <div class="wsr-info">
+      <div class="wsr-title">${a.title||''}</div>
+      ${a.rating ? `<div class="wsr-score">★ ${a.rating}</div>` : ''}
+    </div>
+  </a>`;
+}
+
+async function renderSuggestions() {
+  if (!animeDetail) return;
+  const el = document.getElementById('wkSuggestions');
+  let html = '';
+
+  const rels = (animeDetail.relations||[]).filter(r => r.id && r.title);
+  if (rels.length) {
+    html += renderSuggestionsRail(t('Related'), rels.slice(0, 12), renderRelationCard);
+  }
+
+  el.innerHTML = html;
+  await loadRecommendations(el);
+  await loadSimilar(el);
+}
+
+async function loadRecommendations(el) {
+  if (!animeDetail || !animeDetail.id) return;
+  try {
+    const data = await fetchRecommendations(animeDetail.id);
+    const items = data.results || [];
+    if (!items.length) return;
+    el.innerHTML += renderSuggestionsRail(t('More Like This'), items, renderRecommendationCard);
+  } catch(e) {}
+}
+
+async function loadSimilar(el) {
+  if (!animeDetail) return;
+  const genres = animeDetail.genres || [];
+  const primaryGenre = typeof genres[0] === 'string' ? genres[0] : (genres[0] && genres[0].name) || '';
+  if (!primaryGenre) return;
+  try {
+    const data = await fetchSimilar(primaryGenre, slug || '');
+    const items = data.results || [];
+    if (!items.length) return;
+    el.innerHTML += renderSuggestionsRail(t('You Might Also Like'), items, renderSimilarCard);
+  } catch(e) {}
+}
+
+async function loadTrending() {
+  const el = document.getElementById('wkTrending');
+  try {
+    const data = await fetchTrending();
+    const items = data.results || [];
+    if (!items.length) { el.innerHTML = `<div class="wk-side-empty">${t('No trending data')}</div>`; return; }
+    el.innerHTML = items.map((a, i) => `
+      <a class="wk-trend-item" href="/details.html?id=${a.id}">
+        <span class="wk-trend-rank">${i + 1}</span>
+        <img class="wk-trend-cover" src="${a.cover}" alt="" onerror="this.style.background='var(--night-soft)'">
+        <div class="wk-trend-info">
+          <div class="wk-trend-title">${a.title||''}</div>
+          <div class="wk-trend-meta">
+            ${a.score ? `<span>★ ${a.score}%</span>` : ''}
+            ${a.format ? `<span>${a.format}</span>` : ''}
+            ${a.episodes ? `<span>${a.episodes} eps</span>` : ''}
+          </div>
+        </div>
+      </a>`).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="wk-side-empty">${t('Failed to load')}</div>`;
+  }
+}
+
+function loadHlsPlayer(url, embedFallback) {
+  const div = document.getElementById('player');
+  div.innerHTML = ''; div.classList.add('active');
+  const video = document.createElement('video');
+  video.controls = true; video.autoplay = true; video.playsInline = true;
+  div.appendChild(video);
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+  if (url.endsWith('.m3u8') || url.includes('.m3u8?')) {
+    if (Hls.isSupported()) {
+      hlsInstance = new Hls();
+      hlsInstance.loadSource(url);
+      hlsInstance.attachMedia(video);
+      hlsInstance.on(Hls.Events.ERROR, function(event, data) {
+        if (data.fatal && embedFallback) {
+          hlsInstance.destroy(); hlsInstance = null;
+          loadIframePlayer(embedFallback);
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+      video.onerror = function() {
+        if (embedFallback) loadIframePlayer(embedFallback);
+      };
+    }
+  } else {
+    video.src = url;
+    video.onerror = function() {
+      if (embedFallback) loadIframePlayer(embedFallback);
+    };
+  }
+  setupAutoPlay(video);
+}
+
+function loadIframePlayer(url) {
+  const div = document.getElementById('player');
+  div.innerHTML = ''; div.classList.add('active');
+  const iframe = document.createElement('iframe');
+  iframe.src = url;
+  iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+  iframe.referrerPolicy = 'no-referrer';
+  div.appendChild(iframe);
+  if (animeDetail) {
+    const cwEntry = {
+      id: animeDetail.id || null,
+      slug: slug || '',
+      title: animeDetail.title || '',
+      cover: animeDetail.cover || '',
+      ep: ep,
+      time: 0,
+      duration: 0,
+      lastWatched: Date.now()
+    };
+    saveContinueWatching(cwEntry);
+    if (_iframeCwInterval) clearInterval(_iframeCwInterval);
+    _iframeCwInterval = setInterval(() => {
+      saveContinueWatching({ ...cwEntry, lastWatched: Date.now() });
+    }, 30000);
+  }
+}
+
+function setupAutoPlay(video) {
+  video.addEventListener('ended', () => {
+    clearResume();
+    if (ep >= totalEps) return;
+    if (getAutoPlay()) showNextOverlay();
+  });
+  setupSkipButtons(video);
+  setupResume(video);
+}
+
+function showNextOverlay() {
+  clearAutoPlayTimer();
+  const player = document.getElementById('player');
+  const existing = player.querySelector('.wk-next-overlay');
+  if (existing) existing.remove();
+  let countdown = 5;
+  const overlay = document.createElement('div');
+  overlay.className = 'wk-next-overlay';
+  overlay.innerHTML = `
+    <div class="wk-next-label">${t('NEXT EPISODE')}</div>
+    <div class="wk-next-timer" id="nextTimer">${countdown}</div>
+    <div class="wk-next-btns">
+      <a class="btn cancel" href="#" onclick="cancelAutoPlay(event)"><span>${t('Cancel')}</span></a>
+      <a class="btn" href="${watchUrl(ep+1)}"><span>${t('Watch Now')}</span></a>
+    </div>`;
+  player.appendChild(overlay);
+  autoPlayTimer = setInterval(() => {
+    countdown--;
+    const timerEl = document.getElementById('nextTimer');
+    if (timerEl) timerEl.textContent = countdown;
+    if (countdown <= 0) {
+      clearAutoPlayTimer();
+      location.href = watchUrl(ep+1);
+    }
+  }, 1000);
+}
+
+function cancelAutoPlay(e) {
+  e.preventDefault();
+  clearAutoPlayTimer();
+  const overlay = document.getElementById('player').querySelector('.wk-next-overlay');
+  if (overlay) overlay.remove();
+}
+
+function clearAutoPlayTimer() {
+  if (autoPlayTimer) { clearInterval(autoPlayTimer); autoPlayTimer = null; }
+}
+
+function progressKey() { return 'kaa_progress_' + (slug || id || ''); }
+
+function setupResume(video) {
+  const saved = localStorage.getItem(progressKey());
+  if (!saved) return;
+  try {
+    const p = JSON.parse(saved);
+    if (p.ep !== ep) return;
+    if (!p.time || !p.duration || p.time < p.duration * 0.1) return;
+    const mins = Math.floor(p.time / 60);
+    const secs = Math.floor(p.time % 60);
+    const wrap = document.getElementById('wkControls');
+    const btn = document.createElement('button');
+    btn.className = 'wk-resume-btn';
+    btn.textContent = `${t('Resume from ')}${mins}:${secs.toString().padStart(2,'0')}`;
+    btn.onclick = () => { video.currentTime = p.time; btn.remove(); };
+    wrap.appendChild(btn);
+  } catch(e) {}
+}
+
+let _progressInterval = null;
+let _iframeCwInterval = null;
+function saveProgress(video) {
+  if (_progressInterval) clearInterval(_progressInterval);
+  _progressInterval = setInterval(() => {
+    if (video.paused || video.ended || !video.duration) return;
+    const time = video.currentTime;
+    const duration = video.duration;
+    localStorage.setItem(progressKey(), JSON.stringify({ ep, time, duration }));
+    if (animeDetail) {
+      saveContinueWatching({
+        id: animeDetail.id || null,
+        slug: slug || '',
+        title: animeDetail.title || '',
+        cover: animeDetail.cover || '',
+        ep: ep,
+        time: time,
+        duration: duration,
+        lastWatched: Date.now()
+      });
+    }
+  }, 10000);
+}
+
+function clearResume() {
+  localStorage.removeItem(progressKey());
+  if (slug || id) removeContinueWatching(slug || '', id || null);
+  if (_progressInterval) { clearInterval(_progressInterval); _progressInterval = null; }
+  if (_iframeCwInterval) { clearInterval(_iframeCwInterval); _iframeCwInterval = null; }
+}
+
+function getDefaultSkipIntro(slug) {
+  try { return Number(localStorage.getItem('kaa_skip_' + slug)) || 90; } catch(e) { return 90; }
+}
+
+function setupSkipButtons(video) {
+  const player = document.getElementById('player');
+  let introBtn = null;
+  let outroBtn = null;
+
+  video.addEventListener('loadedmetadata', () => {
+    const dur = video.duration || 0;
+    const skipIntro = getDefaultSkipIntro(slug);
+
+    introBtn = document.createElement('button');
+    introBtn.className = 'wk-skip-btn wk-skip-intro';
+    introBtn.textContent = t('Skip Intro');
+    introBtn.onclick = () => { video.currentTime = skipIntro; introBtn.style.display = 'none'; };
+    introBtn.style.display = 'none';
+    player.appendChild(introBtn);
+
+    if (dur > 180) {
+      outroBtn = document.createElement('button');
+      outroBtn.className = 'wk-skip-btn wk-skip-outro';
+      outroBtn.textContent = t('Skip Outro');
+      outroBtn.onclick = () => { location.href = watchUrl(ep + 1); };
+      outroBtn.style.display = 'none';
+      player.appendChild(outroBtn);
+    }
+  });
+
+  video.addEventListener('timeupdate', () => {
+    const t = video.currentTime;
+    const dur = video.duration || 0;
+    const skipIntro = getDefaultSkipIntro(slug);
+    if (introBtn) introBtn.style.display = (t > 1 && t < skipIntro) ? '' : 'none';
+    if (outroBtn) outroBtn.style.display = (dur > 0 && t > dur - 90 && t < dur - 5) ? '' : 'none';
+  });
+
+  saveProgress(video);
+}
+
+function showShortcuts() {
+  if (document.getElementById('shortcutsOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'shortcutsOverlay';
+  overlay.className = 'shortcuts-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="shortcuts-card">
+      <div class="shortcuts-title">${t('Keyboard Shortcuts')}</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><kbd>←</kbd><span>${t('Previous episode')}</span></div>
+        <div class="shortcut-row"><kbd>→</kbd><span>${t('Next episode')}</span></div>
+        <div class="shortcut-row"><kbd>Space</kbd><span>${t('Play / Pause')}</span></div>
+        <div class="shortcut-row"><kbd>F</kbd><span>${t('Fullscreen')}</span></div>
+        <div class="shortcut-row"><kbd>N</kbd><span>${t('Next episode')}</span></div>
+        <div class="shortcut-row"><kbd>P</kbd><span>${t('Previous episode')}</span></div>
+        <div class="shortcut-row"><kbd>S</kbd><span>${t('Cycle servers')}</span></div>
+        <div class="shortcut-row"><kbd>Esc</kbd><span>${t('Cancel auto-next')}</span></div>
+        <div class="shortcut-row"><kbd>?</kbd><span>${t('Toggle this panel')}</span></div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function cycleServers() {
+  const servers = window._servers || [];
+  if (servers.length < 2) return;
+  const btns = document.querySelectorAll('.wk-server-btn');
+  let active = -1;
+  btns.forEach(b => { if (b.classList.contains('active')) active = Number(b.dataset.idx); });
+  const next = (active + 1) % servers.length;
+  switchServer(next);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' && ep < totalEps) location.href = watchUrl(ep+1);
+  if (e.key === 'ArrowLeft' && ep > 1) location.href = watchUrl(ep-1);
+  if (e.key === ' ' || e.key === 'k') {
+    e.preventDefault();
+    const v = document.querySelector('#player video');
+    if (v) v.paused ? v.play() : v.pause();
+  }
+  if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) {
+    const p = document.getElementById('player');
+    if (p.requestFullscreen) p.requestFullscreen();
+  }
+  if (e.key === 'Escape') {
+    cancelAutoPlay(new Event('click'));
+    const sc = document.getElementById('shortcutsOverlay');
+    if (sc) sc.remove();
+  }
+  if (e.key === 'n' || e.key === 'N') { if (ep < totalEps) location.href = watchUrl(ep+1); }
+  if (e.key === 'p' || e.key === 'P') { if (ep > 1) location.href = watchUrl(ep-1); }
+  if (e.key === 's' || e.key === 'S') cycleServers();
+  if (e.key === '?') showShortcuts();
+});
+
+loadWatch();
+</script>
+</body>
+</html>
