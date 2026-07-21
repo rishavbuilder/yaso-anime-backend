@@ -13,6 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import nsfw_scraper
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("anime")
 
@@ -878,7 +880,9 @@ async def stream_anime(req: StreamRequest):
 
 
 @app.get("/search")
-async def search_anime(q: str = "", page: int = 1):
+async def search_anime(q: str = "", page: int = 1, nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_search(q, page)
     if not q or len(q.strip()) < 2:
         return {"results": [], "total": 0, "has_next": False}
     query = q.strip()
@@ -1001,19 +1005,25 @@ async def browse_types():
 
 
 @app.get("/api/browse/latest")
-async def browse_latest(page: int = 1):
+async def browse_latest(page: int = 1, nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.ohentai_homepage(page)
     data = anikoto_scrape_list("/latest-updated", page)
     return data
 
 
 @app.get("/api/browse/genre/{slug}")
-async def browse_genre(slug: str, page: int = 1):
+async def browse_genre(slug: str, page: int = 1, nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.ohentai_tag(slug, page)
     data = anikoto_scrape_list(f"/genre/{slug}", page)
     return data
 
 
 @app.get("/api/browse/type/{slug}")
-async def browse_type(slug: str, page: int = 1):
+async def browse_type(slug: str, page: int = 1, nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.ohentai_homepage(page)
     data = anikoto_scrape_list(f"/type/{slug}", page)
     return data
 
@@ -1023,7 +1033,12 @@ async def browse_filter(
     page: int = 1,
     genre: str = "",
     term_type: str = "",
+    nsfw: bool = False,
 ):
+    if nsfw:
+        if genre:
+            return nsfw_scraper.ohentai_tag(genre, page)
+        return nsfw_scraper.ohentai_homepage(page)
     extra = {}
     if genre:
         extra["genre[]"] = genre
@@ -1034,7 +1049,16 @@ async def browse_filter(
 
 
 @app.get("/api/browse")
-async def browse_anime(section: str = ""):
+async def browse_anime(section: str = "", nsfw: bool = False):
+    if nsfw:
+        data = nsfw_scraper.nsfw_homepage()
+        section_order = ["trending", "recent", "upcoming", "new_release", "new_added", "completed"]
+        sections = {k: data.get(k, []) for k in section_order}
+        if section and section in sections:
+            results = sections[section]
+        else:
+            results = data.get("recent", [])
+        return {"results": results, "total": len(results), "sections": section_order}
     data = anikoto_homepage()
     section_order = ["trending", "recent", "upcoming", "new_release", "new_added", "completed"]
     sections = {k: data.get(k, []) for k in section_order}
@@ -1182,49 +1206,66 @@ async def get_similar(genre: str = "", exclude: str = ""):
 # ──────────────────────────────────────────────
 
 @app.get("/api/anikoto/homepage")
-async def get_anikoto_homepage():
-    data = anikoto_homepage()
+async def get_anikoto_homepage(nsfw: bool = False):
+    if nsfw:
+        data = nsfw_scraper.nsfw_homepage()
+    else:
+        data = anikoto_homepage()
     return {"status": "success", **data}
 
 
 @app.get("/api/anikoto/trending")
-async def get_anikoto_trending():
+async def get_anikoto_trending(nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_trending()
     data = anikoto_homepage()
     return {"results": data.get("trending", [])[:20]}
 
 
 @app.get("/api/anikoto/recent")
-async def get_anikoto_recent():
+async def get_anikoto_recent(nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_recent()
     data = anikoto_homepage()
     return {"results": data.get("recent", [])[:24]}
 
 
 @app.get("/api/anikoto/upcoming")
-async def get_anikoto_upcoming():
+async def get_anikoto_upcoming(nsfw: bool = False):
+    if nsfw:
+        return {"results": []}
     data = anikoto_homepage()
     return {"results": data.get("upcoming", [])[:12]}
 
 
 @app.get("/api/anikoto/new-release")
-async def get_anikoto_new_release():
+async def get_anikoto_new_release(nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_new_release()
     data = anikoto_homepage()
     return {"results": data.get("new_release", [])[:12]}
 
 
 @app.get("/api/anikoto/new-added")
-async def get_anikoto_new_added():
+async def get_anikoto_new_added(nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_new_added()
     data = anikoto_homepage()
     return {"results": data.get("new_added", [])[:12]}
 
 
 @app.get("/api/anikoto/completed")
-async def get_anikoto_completed():
+async def get_anikoto_completed(nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_completed()
     data = anikoto_homepage()
     return {"results": data.get("completed", [])[:12]}
 
 
 @app.get("/api/anikoto/top")
-async def get_anikoto_top():
+async def get_anikoto_top(nsfw: bool = False):
+    if nsfw:
+        return nsfw_scraper.nsfw_top()
     data = anikoto_homepage()
     return {"results": data.get("top_anime", [])[:9]}
 
