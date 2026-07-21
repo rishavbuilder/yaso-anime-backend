@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TV Series — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="breadcrumb" style="padding:80px 5vw 0"><a href="index.html">Home</a> / <span id="pageTitle"></span></div>
+    <div style="padding:0 5vw">
+      <div class="section-head"><div><div class="section-title" id="pageTitle2"></div><div class="section-sub">TVシリーズ — Television Series</div></div><div class="kanji-mark">番</div></div>
+      <div class="browse-grid" id="tvGrid"></div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="data.js"></script><script src="site.js"></script>
+<script>
+initSite();
+document.getElementById('pageTitle').textContent = t('TV Series');
+document.getElementById('pageTitle2').textContent = t('TV Series');
+const items = filterAnime({ type: 'TV' });
+document.getElementById('tvGrid').innerHTML = items.length ? items.map(a => renderCard(a)).join('') : '<div class="loading">No TV series found</div>';
+document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+</script>
+</body>
+</html>

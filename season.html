@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Season — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="breadcrumb" style="padding:80px 5vw 0"><a href="index.html">Home</a> / <span id="seasonLabel">Season</span></div>
+    <div style="padding:0 5vw">
+      <div class="section-head" id="seasonHead"></div>
+      <div id="seasonSub" style="margin-bottom:24px;"></div>
+      <div class="browse-grid" id="seasonGrid"></div>
+    </div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="data.js"></script><script src="site.js"></script>
+<script>
+initSite();
+const params = new URLSearchParams(location.search);
+const sId = params.get('s');
+if (!sId) {
+  document.getElementById('seasonHead').innerHTML = `<div><div class="section-title">${t('Season')}</div><div class="section-sub">シーズン — All Seasons</div></div><div class="kanji-mark">季</div>`;
+  document.getElementById('seasonGrid').innerHTML = SEASONS.map(s => `<div class="genre-card" onclick="location.href='season.html?s=${encodeURIComponent(s)}'"><div class="kj">${s[0]}</div><div class="en">${s}</div></div>`).join('');
+  document.getElementById('seasonGrid').className = 'genres-grid';
+} else {
+  const name = decodeURIComponent(sId);
+  document.title = name + ' — YASŌ';
+  document.getElementById('seasonLabel').textContent = name;
+  document.getElementById('seasonHead').innerHTML = `<div><div class="section-title">${name}</div><div class="section-sub">シーズン — Season</div></div><div class="kanji-mark">季</div>`;
+  const results = ANIME.filter(a => a.season === name);
+  document.getElementById('seasonSub').innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">${SEASONS.map(s => `<a href="season.html?s=${encodeURIComponent(s)}" style="font-size:.68rem;padding:5px 14px;border:1px solid ${s===name?'var(--gold)':'var(--line)'};color:${s===name?'var(--gold)':'var(--washi-dim)'};cursor:pointer;font-family:var(--font-m);letter-spacing:.06em;">${s}</a>`).join('')}</div>`;
+  const grid = document.getElementById('seasonGrid');
+  if (!results.length) { grid.innerHTML = '<div class="loading">No anime found</div>'; }
+  else { grid.innerHTML = results.map(a => renderCard(a)).join(''); grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el)); }
+}
+</script>
+</body>
+</html>

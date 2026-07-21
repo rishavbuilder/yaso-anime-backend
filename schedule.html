@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Schedule — YASŌ</title>
+<link rel="icon" type="image/png" href="/public/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/public/favicon-192.png">
+<link rel="apple-touch-icon" href="/public/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+<div class="loader" id="loader">
+  <div class="loader-kanji">夜想</div>
+  <div class="loader-line"></div>
+  <div class="loader-sub">Night Archive</div>
+</div>
+<div class="grain"></div><div class="petals" id="petals"></div>
+<header id="site-header"></header>
+<main class="main">
+  <section>
+    <div class="section-head"><div><div class="section-title" data-i18n="Weekly Airing Schedule">Weekly Airing Schedule</div><div class="section-sub" data-i18n-sub="放送スケジュール|||Airing This Week">放送スケジュール — Airing This Week</div></div><div class="kanji-mark">曜</div></div>
+    <div id="scheduleContent"><div class="loading" data-i18n="Loading...">Loading...</div></div>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="/data.js?v=7"></script><script src="/site.js?v=9"></script>
+<script>
+initSite();
+applyTranslations();
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const DAY_KEYS = DAYS.map(d => t(d));
+const DAY_SHORT = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const DAY_JP = ['月','火','水','木','金','土','日'];
+let scheduleData = {};
+let selectedDay = getTodayIndex();
+
+function getTodayIndex() {
+  const d = new Date().getDay();
+  return d === 0 ? 6 : d - 1;
+}
+
+function formatTime(ts) {
+  return new Date(ts * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function timeUntil(ts) {
+  const diff = ts * 1000 - Date.now();
+  if (diff <= 0) return t('Airing now');
+  const days = Math.floor(diff / 86400000);
+  const hrs = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return `In ${days}d ${hrs}h`;
+  if (hrs > 0) return `In ${hrs}h ${mins}m`;
+  return `In ${mins}m`;
+}
+
+function renderDayTabs() {
+  const tabs = DAYS.map((day, i) => {
+    const isToday = i === selectedDay;
+    return `<div class="sched-day-tab${isToday ? ' active' : ''}" onclick="selectDay(${i})">
+      <span class="tab-label">${DAY_SHORT[i]}</span>
+      <span class="tab-jp">${DAY_JP[i]}</span>
+      ${i === getTodayIndex() ? `<span class="tab-badge">${t('TODAY')}</span>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="sched-day-tabs">${tabs}</div>`;
+}
+
+function renderStats() {
+  const day = DAYS[selectedDay];
+  const shows = scheduleData[day] || [];
+  const totalCount = Object.values(scheduleData).reduce((sum, arr) => sum + arr.length, 0);
+  const avgScore = shows.length ? Math.round(shows.reduce((s, a) => s + (a.score || 0), 0) / shows.length) : 0;
+  const nextShow = shows.find(a => a.airing_at * 1000 > Date.now());
+
+  return `<div class="sched-stats">
+    <div class="sched-stat">
+      <span class="sched-stat-icon">📺</span>
+      <span class="sched-stat-text">${shows.length} ${t('shows')} ${t('on')} <strong>${DAY_SHORT[selectedDay]}</strong></span>
+    </div>
+    <div class="sched-stat">
+      <span class="sched-stat-icon">📅</span>
+      <span class="sched-stat-text">${totalCount} ${t('shows this week')}</span>
+    </div>
+    ${avgScore ? `<div class="sched-stat">
+      <span class="sched-stat-icon">⭐</span>
+      <span class="sched-stat-text">${t('Avg')} <strong>${avgScore}%</strong></span>
+    </div>` : ''}
+    ${nextShow ? `<div class="sched-stat">
+      <span class="sched-stat-icon">🔜</span>
+      <span class="sched-stat-text">${t('Next')}: <strong>${timeUntil(nextShow.airing_at)}</strong></span>
+    </div>` : ''}
+  </div>`;
+}
+
+function renderCard(a) {
+  const detailHref = `/details.html?id=${a.id || ''}`;
+  return `<div class="bc">
+    <div class="bc-front">
+      <img class="bc-art" src="${a.cover || ''}" alt="" onerror="this.style.background='var(--night-soft)'">
+      <div class="bc-gradient"></div>
+      ${a.score ? `<div class="bc-score">★ ${a.score}%</div>` : ''}
+      ${a.format ? `<div class="bc-fmt">${a.format.replace('_',' ')}</div>` : ''}
+      <div class="bc-title-overlay">${a.title || ''}</div>
+    </div>
+    <div class="bc-back">
+      <div class="bcb-title">${a.title || ''}</div>
+      <div class="bcb-meta">
+        ${a.format ? `<span>${a.format.replace('_',' ')}</span>` : ''}
+        ${a.episode ? `<span>${t('Ep')} ${a.episode}</span>` : ''}
+        ${a.score ? `<span>★ ${a.score}%</span>` : ''}
+      </div>
+      <div class="bcb-meta" style="margin-top:6px;">
+        <span style="color:var(--gold);">${formatTime(a.airing_at)}</span>
+        <span style="color:var(--shu);">${timeUntil(a.airing_at)}</span>
+      </div>
+      <div class="bcb-actions">
+        <a class="bcb-btn bcb-btn-details" href="${detailHref}">${t('details →')}</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderGrid() {
+  const day = DAYS[selectedDay];
+  const shows = scheduleData[day] || [];
+  if (!shows.length) {
+    return `<div class="sched-empty-grid">
+      <div class="sched-empty-icon">📭</div>
+      <div class="sched-empty-text">${t('No shows scheduled')}</div>
+    </div>`;
+  }
+  return `<div class="sched-grid">${shows.map(a => renderCard(a)).join('')}</div>`;
+}
+
+function renderAll() {
+  const el = document.getElementById('scheduleContent');
+  el.innerHTML = renderDayTabs() + renderStats() + renderGrid();
+}
+
+function selectDay(idx) {
+  selectedDay = idx;
+  renderAll();
+  const grid = document.querySelector('.sched-grid');
+  if (grid) { grid.classList.add('sched-grid-enter'); requestAnimationFrame(() => grid.classList.remove('sched-grid-enter')); }
+}
+
+async function loadSchedule() {
+  const el = document.getElementById('scheduleContent');
+  try {
+    const data = await fetchSchedule();
+    scheduleData = data.schedule || {};
+    renderAll();
+  } catch(e) {
+    el.innerHTML = `<div class="loading">${t('Failed to load schedule')}</div>`;
+  }
+}
+
+loadSchedule();
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+INFO:     Started server process [17958]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58902 - "GET /details.html?slug=jewelpet-attack-chance-pae4f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /api/anilist/search?q=jewelpet%20attack%20chance HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /anime/116150 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /details.html?slug=jewelpet-attack-chance-pae4f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /api/anilist/search?q=jewelpet%20attack%20chance HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /anime/116150 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59662 - "GET /api/anikoto/new-release HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59650 - "GET /api/anikoto/upcoming HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59668 - "GET /api/anikoto/new-added HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /api/anikoto/trending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59678 - "GET /api/anikoto/completed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59642 - "GET /api/anikoto/recent HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /search?q=att&page=1&nsfw=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59684 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59650 - "GET /search?q=atta&page=1&nsfw=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59642 - "GET /search?q=attac&page=1&nsfw=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /search?q=attack&page=1&nsfw=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /api/anilist/search?q=attack%20on%20titan%20ova HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /anime/18397 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /watch.html?id=18397&ep=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58902 - "GET /anime/18397 HTTP/1.1" 200 OK
+[stream] Trying anikoto search: attack-on-titan-ova-oc7gu
+[anikoto] Found 3 episodes for slug=attack-on-titan-ova-oc7gu
+INFO:     127.0.0.1:38982 - "GET /anime/16498 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38982 - "GET /anime/16498 HTTP/1.1" 200 OK
+[stream] Anikoto search success: Attack on Titan OVA
+[stream] Trying anikoto search: attack-on-titan-ova-oc7gu
+[anikoto] Found 3 episodes for slug=attack-on-titan-ova-oc7gu
+[stream] Anikoto search success: Attack on Titan
+INFO:     127.0.0.1:38982 - "POST /stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52774 - "GET /watch.html?id=16498&ep=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52774 - "GET /anime/16498 HTTP/1.1" 200 OK
+[stream] Trying anikoto search: attack-on-titan-ova-oc7gu
+[anikoto] Found 3 episodes for slug=attack-on-titan-ova-oc7gu
+[stream] Anikoto search success: Attack on Titan
+INFO:     127.0.0.1:52774 - "POST /stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35854 - "GET /watch.html?id=16498&ep=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35854 - "GET /anime/16498 HTTP/1.1" 200 OK
+[stream] Trying anikoto search: attack-on-titan-ova-oc7gu
+[anikoto] Found 3 episodes for slug=attack-on-titan-ova-oc7gu
+[stream] Anikoto search success: Attack on Titan
+INFO:     127.0.0.1:35854 - "POST /stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42088 - "GET /watch.html?id=16498&ep=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42088 - "GET /data.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42088 - "GET /anime/16498 HTTP/1.1" 200 OK
+[stream] Trying anikoto search: attack-on-titan-ova-oc7gu
+[anikoto] Found 3 episodes for slug=attack-on-titan-ova-oc7gu
+[stream] Anikoto search success: Attack on Titan
+INFO:     127.0.0.1:42088 - "POST /stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35892 - "GET /site.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35910 - "GET /api/anikoto/new-release HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35938 - "GET /api/anikoto/completed HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35900 - "GET /api/anikoto/recent HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35892 - "GET /api/anikoto/trending HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35902 - "GET /api/anikoto/upcoming HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35922 - "GET /api/anikoto/new-added HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35946 - "GET /details.html?slug=the-classroom-of-a-black-cat-and-a-witch-bavvd HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35946 - "GET /api/anilist/search?q=the%20classroom%20of%20a%20black%20cat%20and%20a%20witch HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35946 - "GET /anime/196974 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35946 - "GET /watch.html?id=196974&ep=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35946 - "GET /anime/196974 HTTP/1.1" 200 OK
+[stream] FAILED for title=The Classroom of the Black Cat and a Witch slug= ep=1
+INFO:     127.0.0.1:35946 - "POST /stream HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:44932 - "GET /watch.html?id=196974&ep=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44932 - "GET /anime/196974 HTTP/1.1" 200 OK
+[stream] FAILED for title=The Classroom of the Black Cat and a Witch slug= ep=1
+INFO:     127.0.0.1:44932 - "POST /stream HTTP/1.1" 404 Not Found
