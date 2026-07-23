@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="/styles.css?v=10">
 </head>
 <body>
+<a href="#main-content" class="sr-only sr-only:focusable">Skip to content</a>
+<div id="toast-container"></div>
 <div class="loader" id="loader">
   <div class="loader-kanji">夜想</div>
   <div class="loader-line"></div>
@@ -38,25 +40,32 @@
 <script>
 initSite();
 applyTranslations();
-const items = getWatchlist();
-if (!items.length) {
-  document.getElementById('mylistEmpty').style.display = '';
-} else {
-  document.getElementById('mylistGrid').innerHTML = items.map(a => {
-    const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}` : (a.id ? `/details.html?id=${a.id}` : '#');
-    return `<a class="wl-card-lg" href="${href}">
-      <img class="wl-card-lg-cover" src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
-      <button class="wl-remove-btn" onclick="event.preventDefault();event.stopPropagation();removeFromWatchlist(${a.id});location.reload();" title="${t('Remove from list')}">✕</button>
-      <div class="wl-card-lg-info">
-        <div class="wl-card-lg-title">${a.title||''}</div>
-        <div class="wl-card-lg-meta">
-          ${a.score ? `<span>★ ${a.score}%</span>` : ''}
-          ${a.format ? `<span>${a.format}</span>` : ''}
+function renderMyList() {
+  const items = getWatchlist();
+  const grid = document.getElementById('mylistGrid');
+  const empty = document.getElementById('mylistEmpty');
+  if (!items.length) {
+    grid.innerHTML = '';
+    empty.style.display = '';
+  } else {
+    empty.style.display = 'none';
+    grid.innerHTML = items.map(a => {
+      const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}` : (a.id ? `/details.html?id=${a.id}` : '#');
+      return `<a class="wl-card-lg" href="${href}">
+        <img class="wl-card-lg-cover" src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+        <button class="wl-remove-btn" onclick="event.preventDefault();event.stopPropagation();removeFromWatchlist(${a.id});renderMyList();" title="${t('Remove from list')}">✕</button>
+        <div class="wl-card-lg-info">
+          <div class="wl-card-lg-title">${a.title||''}</div>
+          <div class="wl-card-lg-meta">
+            ${a.score ? `<span>★ ${a.score}%</span>` : ''}
+            ${a.format ? `<span>${a.format}</span>` : ''}
+          </div>
         </div>
-      </div>
-    </a>`;
-  }).join('');
+      </a>`;
+    }).join('');
+  }
 }
+renderMyList();
 </script>
 </body>
 </html>

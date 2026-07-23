@@ -36,7 +36,7 @@ const params = new URLSearchParams(location.search);
 const sId = params.get('s');
 if (!sId) {
   document.getElementById('studioHead').innerHTML = `<div><div class="section-title">${t('Studios')}</div><div class="section-sub">スタジオ — All Studios</div></div><div class="kanji-mark">作</div>`;
-  document.getElementById('studioGrid').innerHTML = STUDIOS.map(s => `<div class="genre-card" onclick="location.href='studio.html?s=${s.id}'"><div class="kj">${localized(s.name)[0]}</div><div class="en">${localized(s.name)}</div></div>`).join('');
+  document.getElementById('studioGrid').innerHTML = STUDIOS.map(s => `<a class="genre-card" href="studio.html?s=${s.id}"><div class="kj">${localized(s.name)[0]}</div><div class="en">${localized(s.name)}</div></a>`).join('');
   document.getElementById('studioGrid').className = 'genres-grid';
 } else {
   const studio = getStudioById(sId);

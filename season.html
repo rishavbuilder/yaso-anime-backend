@@ -36,7 +36,7 @@ const params = new URLSearchParams(location.search);
 const sId = params.get('s');
 if (!sId) {
   document.getElementById('seasonHead').innerHTML = `<div><div class="section-title">${t('Season')}</div><div class="section-sub">シーズン — All Seasons</div></div><div class="kanji-mark">季</div>`;
-  document.getElementById('seasonGrid').innerHTML = SEASONS.map(s => `<div class="genre-card" onclick="location.href='season.html?s=${encodeURIComponent(s)}'"><div class="kj">${s[0]}</div><div class="en">${s}</div></div>`).join('');
+  document.getElementById('seasonGrid').innerHTML = SEASONS.map(s => `<a class="genre-card" href="season.html?s=${encodeURIComponent(s)}"><div class="kj">${s[0]}</div><div class="en">${s}</div></a>`).join('');
   document.getElementById('seasonGrid').className = 'genres-grid';
 } else {
   const name = decodeURIComponent(sId);

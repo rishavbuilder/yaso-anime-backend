@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="/styles.css?v=10">
 </head>
 <body>
+<a href="#main-content" class="sr-only sr-only:focusable">Skip to content</a>
+<div id="toast-container"></div>
 <div class="loader" id="loader">
   <div class="loader-kanji">夜想</div>
   <div class="loader-line"></div>
@@ -33,17 +35,17 @@
 
   <section id="continueSection" style="display:none"><div class="section-head reveal"><div><div class="section-title" data-i18n="Continue Watching">Continue Watching</div><div class="section-sub" data-i18n-sub="続きから|||Pick Up Where You Left Off">続きから — Pick Up Where You Left Off</div></div><div class="kanji-mark">続</div></div><div id="continueRail"></div></section>
 
-  <section id="trendingSection"><div class="section-head reveal"><div><div class="section-title" data-i18n="Now Streaming">Now Streaming</div><div class="section-sub" data-i18n-sub="今宵の配信|||Tonight's Selection">今宵の配信 — Tonight's Selection</div></div><div class="kanji-mark">配</div></div><div id="trendingRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+  <section id="trendingSection"><div class="section-head reveal"><div><div class="section-title" data-i18n="Now Streaming">Now Streaming</div><div class="section-sub" data-i18n-sub="今宵の配信|||Tonight's Selection">今宵の配信 — Tonight's Selection</div></div><div class="kanji-mark">配</div></div><div id="trendingRail"><div class="skeleton-row" style="display:flex;gap:16px;overflow:hidden;padding:20px 0;"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div></section>
 
-  <section id="latestSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Latest Episodes">Latest Episodes</div><div class="section-sub" data-i18n-sub="最新エピソード|||Just Aired">最新エピソード — Just Aired</div></div><div class="kanji-mark">新</div></div><div id="latestRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+  <section id="latestSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Latest Episodes">Latest Episodes</div><div class="section-sub" data-i18n-sub="最新エピソード|||Just Aired">最新エピソード — Just Aired</div></div><div class="kanji-mark">新</div></div><div id="latestRail"><div class="skeleton-row" style="display:flex;gap:16px;overflow:hidden;padding:20px 0;"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div></section>
 
-  <section id="upcomingSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Upcoming Anime">Upcoming Anime</div><div class="section-sub" data-i18n-sub="近日公開|||Coming Soon">近日公開 — Coming Soon</div></div><div class="kanji-mark">次</div></div><div id="upcomingRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+  <section id="upcomingSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Upcoming Anime">Upcoming Anime</div><div class="section-sub" data-i18n-sub="近日公開|||Coming Soon">近日公開 — Coming Soon</div></div><div class="kanji-mark">次</div></div><div id="upcomingRail"><div class="skeleton-row" style="display:flex;gap:16px;overflow:hidden;padding:20px 0;"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div></section>
 
-  <section id="newReleaseSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="New Releases">New Releases</div><div class="section-sub" data-i18n-sub="新作アニメ|||Fresh This Season">新作アニメ — Fresh This Season</div></div><div class="kanji-mark">発</div></div><div id="newReleaseRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+  <section id="newReleaseSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="New Releases">New Releases</div><div class="section-sub" data-i18n-sub="新作アニメ|||Fresh This Season">新作アニメ — Fresh This Season</div></div><div class="kanji-mark">発</div></div><div id="newReleaseRail"><div class="skeleton-row" style="display:flex;gap:16px;overflow:hidden;padding:20px 0;"><div class="skeleton skeleton-card" style="width:300px;height:200px;"></div><div class="skeleton skeleton-card" style="width:150px;height:200px;"></div><div class="skeleton skeleton-card" style="width:150px;height:200px;"></div></div></div></section>
 
-  <section id="newAddedSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="New Added">New Added</div><div class="section-sub" data-i18n-sub="新規追加|||Recently Added">新規追加 — Recently Added</div></div><div class="kanji-mark">追</div></div><div id="newAddedRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+  <section id="newAddedSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Recently Added">Recently Added</div><div class="section-sub" data-i18n-sub="最近追加|||Recently Added">最近追加 — Recently Added</div></div><div class="kanji-mark">追</div></div><div id="newAddedRail"><div class="skeleton-row" style="display:flex;gap:16px;overflow:hidden;padding:20px 0;"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div></section>
 
-  <section id="completedSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Just Completed">Just Completed</div><div class="section-sub" data-i18n-sub="完結|||Finished">完結 — Finished</div></div><div class="kanji-mark">完</div></div><div id="completedRail"><div class="loading" data-i18n="Loading...">Loading...</div></div></section>
+  <section id="completedSection" class="reveal"><div class="section-head"><div><div class="section-title" data-i18n="Just Completed">Just Completed</div><div class="section-sub" data-i18n-sub="完結|||Finished">完結 — Finished</div></div><div class="kanji-mark">完</div></div><div id="completedRail"><div class="skeleton-row" style="display:flex;gap:16px;overflow:hidden;padding:20px 0;"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div></div></section>
 
   <svg class="brush reveal" viewBox="0 0 1000 60" preserveAspectRatio="none"><path d="M10 30 C 250 5, 450 55, 700 25 S 950 15, 990 32"/></svg>
 
@@ -68,20 +70,45 @@ if (cwItems.length) {
   document.getElementById('continueRail').innerHTML = renderContinueWatching(cwItems);
 }
 
-document.getElementById('genresGrid').innerHTML = GENRES.map(g =>
-  `<div class="genre-card" href="/genre.html?g=${g.id}"><div class="kj">${g.kj}</div><div class="en">${getLang() === 'ja' ? g.name.ja : g.name.en}</div></div>`
-).join('');
-document.querySelectorAll('.genre-card').forEach(el => {
-  el.style.cursor = 'pointer';
-  el.addEventListener('click', () => location.href = el.getAttribute('href'));
-});
+const INITIAL_GENRES = 8;
+let genresExpanded = false;
+function renderGenres() {
+  const grid = document.getElementById('genresGrid');
+  const items = genresExpanded ? GENRES : GENRES.slice(0, INITIAL_GENRES);
+  const btn = GENRES.length > INITIAL_GENRES
+    ? `<button class="genre-show-more" onclick="toggleGenres()">${genresExpanded ? t('Show Less') : t('Show All')}</button>`
+    : '';
+  grid.innerHTML = items.map(g =>
+    `<a class="genre-card" href="/genre.html?g=${g.id}"><div class="kj">${g.kj}</div><div class="en">${getLang() === 'ja' ? g.name.ja : g.name.en}</div></a>`
+  ).join('') + btn;
+}
+renderGenres();
+function toggleGenres() {
+  genresExpanded = !genresExpanded;
+  renderGenres();
+}
 
 fetchTrending().then(items => {
   document.getElementById('trendingRail').innerHTML = renderSpotlight(items.results || items);
   document.querySelectorAll('#trendingRail .card, #trendingRail .spotlight-main, #trendingRail .sp-card').forEach(el => cardObserver.observe(el));
 }).catch(() => {
-  document.getElementById('trendingRail').innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
+  document.getElementById('trendingRail').innerHTML = `<div class="loading" style="flex-direction:column;gap:12px;">
+    <span>${t('Failed to load')}</span>
+    <button onclick="location.reload()" style="background:transparent;border:1px solid var(--shu);color:var(--shu);padding:6px 16px;border-radius:4px;font-family:var(--font-m);font-size:.65rem;letter-spacing:.06em;cursor:pointer;transition:all 0.2s ease;">
+      ${t('Retry')}
+    </button>
+  </div>`;
 });
+
+function showError(railId, fetchFn, renderFn, sliceN) {
+  document.getElementById(railId).innerHTML = `<div class="loading" style="flex-direction:column;gap:12px;">
+    <span>${t('Failed to load')}</span>
+    <button onclick="loadSection(${fetchFn.name}, '${railId}', ${renderFn.name}, ${sliceN || 'undefined'})" 
+      style="background:transparent;border:1px solid var(--shu);color:var(--shu);padding:6px 16px;border-radius:4px;font-family:var(--font-m);font-size:.65rem;letter-spacing:.06em;cursor:pointer;transition:all 0.2s ease;">
+      ${t('Retry')}
+    </button>
+  </div>`;
+}
 
 function loadSection(fetchFn, railId, renderFn, sliceN) {
   fetchFn().then(data => {
@@ -89,7 +116,7 @@ function loadSection(fetchFn, railId, renderFn, sliceN) {
     document.getElementById(railId).innerHTML = renderFn(items);
     document.querySelectorAll('#' + railId + ' .card, #' + railId + ' .p-card, #' + railId + ' .d-item, #' + railId + ' .bento-main, #' + railId + ' .bento-sm, #' + railId + ' .c-card, #' + railId + ' .tl-item').forEach(el => cardObserver.observe(el));
   }).catch(() => {
-    document.getElementById(railId).innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
+    showError(railId, fetchFn, renderFn, sliceN);
   });
 }
 

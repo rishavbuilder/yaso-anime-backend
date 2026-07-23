@@ -12,6 +12,8 @@
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
+<a href="#main-content" class="sr-only sr-only:focusable">Skip to content</a>
+<div id="toast-container"></div>
 <div class="loader" id="loader">
   <div class="loader-kanji">夜想</div>
   <div class="loader-line"></div>
@@ -290,9 +292,16 @@ function handleWatchlistToggle(btn) {
     format: btn.dataset.format,
     score: btn.dataset.score ? Number(btn.dataset.score) : null
   };
-  const added = toggleWatchlist(anime);
-  btn.className = 'wk-list-btn' + (added ? ' active' : '');
-  btn.textContent = added ? '♥ '+t('In My List') : '♡ '+t('Add to List');
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+  setTimeout(() => {
+    const added = toggleWatchlist(anime);
+    btn.className = 'wk-list-btn' + (added ? ' active' : '');
+    btn.textContent = added ? '♥ '+t('In My List') : '♡ '+t('Add to List');
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+    showToast(added ? `"${anime.title}" added to list` : `"${anime.title}" removed from list`);
+  }, 150);
 }
 
 const RELATION_LABEL = { SEQUEL:t('Sequel'),PREQUEL:t('Prequel'),SIDE_STORY:t('Side Story'),ALTERNATIVE:t('Alternative'),SPIN_OFF:t('Spin Off'),ADAPTATION:t('Adaptation'),SOURCE:t('Source'),COMPANION:t('Companion'),CHARACTER:t('Character'),SUMMARY:t('Summary'),OTHER:t('Other') };

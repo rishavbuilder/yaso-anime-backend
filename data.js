@@ -1,5 +1,49 @@
 const API = '';
 
+/* ── Toast Notifications ── */
+function showToast(msg, undoFn, duration = 5000) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<span class="toast-msg">${msg}</span>`;
+  if (undoFn) {
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'toast-undo';
+    undoBtn.textContent = 'Undo';
+    undoBtn.onclick = () => {
+      undoFn();
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 250);
+    };
+    toast.appendChild(undoBtn);
+  }
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.classList.add('toast-out');
+      setTimeout(() => toast.remove(), 250);
+    }
+  }, duration);
+}
+
+/* ── Image Error Handler ── */
+function handleImageError(img, title) {
+  const fallback = (title || '?')[0].toUpperCase();
+  const isKanji = /[\u3000-\u9fff]/.test(fallback);
+  img.style.background = 'var(--night-soft)';
+  img.style.display = 'flex';
+  img.style.alignItems = 'center';
+  img.style.justifyContent = 'center';
+  img.style.fontFamily = isKanji ? 'var(--font-d)' : 'var(--font-m)';
+  img.style.fontSize = isKanji ? '2rem' : '1.5rem';
+  img.style.fontWeight = '700';
+  img.style.color = 'var(--shu)';
+  img.alt = fallback;
+  img.onerror = null;
+  img.src = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="150" height="225"><rect fill="%23182238" width="150" height="225"/><text x="75" y="120" text-anchor="middle" fill="%23b7392a" font-size="${isKanji ? '48' : '36'}" font-family="serif">${fallback}</text></svg>`);
+}
+
 const GENRES = [
   { id: 'action', name: { en: 'Action', ja: 'アクション' }, kj: '闘' },
   { id: 'romance', name: { en: 'Romance', ja: 'ロマンス' }, kj: '恋' },
@@ -23,7 +67,7 @@ const JP_WORDS = {
   'Movies': '映画', 'OVAs': 'OVA', 'ONAs': 'ONA', 'TV Series': 'TVシリーズ',
   'Schedule': 'スケジュール', 'Genres': 'ジャンル', 'Studios': 'スタジオ', 'Season': 'シーズン',
   'Now Streaming': '今宵の配信', 'Top Ranked': 'トップランキング', 'Airing Schedule': '放送スケジュール',
-  'Browse by Feeling': '感情で選ぶ', 'Explore All Anime': '全アニメを探す', 'Search Anime...': 'アニメを検索...',
+  'Browse by Feeling': '感情で選ぶ', 'Explore All Anime': '全アニメを探す', 'Search Anime...': '2文字以上で検索...', 'Show All': 'すべて表示',
   'Latest Episodes': '最新エピソード', 'Upcoming Anime': '近日公開',
   'New Added': '新規追加', 'Just Completed': '完結',
   'Episode': 'エピソード', 'Episodes': 'エピソード', 'Watch Now': '今見る', 'Add to List': 'リストに追加',
@@ -44,7 +88,7 @@ const JP_WORDS = {
   'Enter the Archive': 'アーカイブに入る', 'SCROLL': 'スクロール',
   'All Anime': '全アニメ', 'All Genres': '全ジャンル', 'All Types': '全タイプ',
   'anime found': '件のアニメが見つかりました', 'No anime found': 'アニメが見つかりませんでした',
-  'Loading...': '読み込み中...', 'Failed to load': '読み込みに失敗しました',
+  'Loading...': '読み込み中...', 'Failed to load': '読み込みに失敗しました', 'Retry': '再試行',
   '← Prev': '← 前へ', 'Next →': '次へ →', 'Page': 'ページ',
   'Home': 'ホーム', 'Finding stream...': 'ストリームを検索中...',
   'Trending': 'トレンド', 'SUB': '字幕', 'DUB': '吹替', 'SERVER': 'サーバー',
@@ -265,6 +309,7 @@ async function fetchMangaChapterImages(chapterId) { return api('/api/manga/chapt
 function getGenreById(id) { return GENRES.find(g => g.id === id); }
 
 /* ── Watchlist (My List) ── */
+let _lastRemovedWatchlist = null;
 function getWatchlist() {
   try { return JSON.parse(localStorage.getItem('kaa_watchlist')) || []; } catch(e) { return []; }
 }
@@ -275,15 +320,29 @@ function addToWatchlist(anime) {
   if (list.length > 20) list.length = 20;
   localStorage.setItem('kaa_watchlist', JSON.stringify(list));
 }
-function removeFromWatchlist(id) {
-  const list = getWatchlist().filter(a => a.id !== id);
-  localStorage.setItem('kaa_watchlist', JSON.stringify(list));
+function removeFromWatchlist(id, silent = false) {
+  const list = getWatchlist();
+  const removed = list.find(a => a.id === id);
+  const newList = list.filter(a => a.id !== id);
+  localStorage.setItem('kaa_watchlist', JSON.stringify(newList));
+  if (!silent && removed) {
+    _lastRemovedWatchlist = removed;
+    showToast(
+      `"${removed.title}" removed`,
+      () => {
+        const restored = getWatchlist();
+        restored.unshift(removed);
+        localStorage.setItem('kaa_watchlist', JSON.stringify(restored));
+        if (typeof renderMyList === 'function') renderMyList();
+      }
+    );
+  }
 }
 function isInWatchlist(id) {
   return getWatchlist().some(a => a.id === id);
 }
 function toggleWatchlist(anime) {
-  if (isInWatchlist(anime.id)) { removeFromWatchlist(anime.id); return false; }
+  if (isInWatchlist(anime.id)) { removeFromWatchlist(anime.id, true); return false; }
   addToWatchlist(anime); return true;
 }
 

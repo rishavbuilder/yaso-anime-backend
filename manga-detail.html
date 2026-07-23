@@ -63,7 +63,7 @@ let mangaData = null;
 
 const LANG_FLAGS = {en:'\u{1F1EC}\u{1F1E7}',ja:'\u{1F1EF}\u{1F1F5}',ko:'\u{1F1F0}\u{1F1F7}',zh:'\u{1F1E8}\u{1F1F3}',es:'\u{1F1EA}\u{1F1F8}',fr:'\u{1F1EB}\u{1F1F7}',de:'\u{1F1E9}\u{1F1EA}',pt:'\u{1F1E7}\u{1F1F7}',ru:'\u{1F1F7}\u{1F1FA}',ar:'\u{1F1F8}\u{1F1E6}',id:'\u{1F1EE}\u{1F1E9}',th:'\u{1F1F9}\u{1F1ED}',vi:'\u{1F1FB}\u{1F1F3}',pl:'\u{1F1F5}\u{1F1F1}',it:'\u{1F1EE}\u{1F1F9}',tr:'\u{1F1F9}\u{1F1F7}'};
 const GROUP_COLORS = ['#dc3545','#e67e22','#2ecc71','#3498db','#9b59b6','#1abc9c','#e74c3c','#f39c12','#16a085','#8e44ad'];
-const STATUS_MAP = {ongoing:'ongoing',completed:'completed','hiatus':'hiatus',cancelled:'cancelled'};
+const STATUS_MAP = {ongoing:'ongoing',completed:'completed','hiatus':'hiatus',cancelled:'cancelled',Ongoing:'ongoing',Completed:'completed',Hiatus:'hiatus',Cancelled:'cancelled'};
 
 async function init() {
   if (!mangaId) { main.innerHTML = '<div class="loading" style="padding:120px 0;">No manga ID provided</div>'; return; }
@@ -202,7 +202,7 @@ function renderDetail(m, chapters, recs) {
         <div class="md-hero-tags">
           ${heroGenres.map(g => '<span class="md-tag">' + g + '</span>').join('')}
           ${extraGenres ? '<span class="md-tag md-tag-plus">+' + extraGenres + '</span>' : ''}
-          <span class="md-status-dot ' + statusCls + '"></span>
+          <span class="md-status-dot ${statusCls}"></span>
           <span class="md-status-text">${m.type || 'Manga'} \u00B7 ${(m.status || 'Unknown')} ${m.year ? '\u00B7 ' + m.year : ''} ${totalChapters ? '\u00B7 ' + totalChapters + ' chapters' : ''}</span>
         </div>
         <div class="md-hero-meta">

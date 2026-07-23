@@ -2,7 +2,7 @@
 # Sources: Anikoto (search, stream, homepage), AniList (detail, browse)
 
 import os, re, time, asyncio, logging
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 from typing import Optional
 
 import requests
@@ -1381,7 +1381,8 @@ def manga_search(q: str = Query(""), page: int = Query(1), orig_lang: str = Quer
         for rel in m.get("relationships", []):
             if rel["type"] == "cover_art" and rel.get("attributes"):
                 fn = rel["attributes"].get("fileName", "")
-                cover_url = f"https://uploads.mangadex.org/covers/{m['id']}/{fn}.256.jpg"
+                raw_url = f"https://uploads.mangadex.org/covers/{m['id']}/{fn}"
+                cover_url = f"/api/manga/cover?url={quote(raw_url, safe='')}"
         results.append({
             "id": m["id"], "title": title, "cover": cover_url,
             "type": mtype, "status": status,
@@ -1411,6 +1412,21 @@ def manga_proxy(chapter_id: str = Query(..., alias="chapterId"), page: int = Que
     except Exception as e:
         log.warning(f"Manga proxy error: {e}")
         raise HTTPException(status_code=502, detail="Image proxy error")
+
+
+@app.get("/api/manga/cover")
+def manga_cover_proxy(url: str = Query(...)):
+    """Proxy MangaDex cover images with correct Referer to bypass hotlink protection."""
+    if not url.startswith("https://uploads.mangadex.org/covers/"):
+        raise HTTPException(status_code=400, detail="Invalid cover URL")
+    try:
+        r = requests.get(url, headers={**MANGADEX_HEADERS, "Referer": "https://mangadex.org/"}, timeout=TIMEOUT, stream=True)
+        r.raise_for_status()
+        ct = r.headers.get("Content-Type", "image/jpeg")
+        return StreamingResponse(r.iter_content(1024), media_type=ct, headers={"Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        log.warning(f"Cover proxy error: {e}")
+        raise HTTPException(status_code=502, detail="Cover proxy error")
 
 
 @app.get("/api/manga/chapter/{chapter_id}")
@@ -1448,7 +1464,8 @@ def manga_detail(manga_id: str):
     for rel in m.get("relationships", []):
         if rel["type"] == "cover_art" and rel.get("attributes"):
             fn = rel["attributes"].get("fileName", "")
-            cover_url = f"https://uploads.mangadex.org/covers/{manga_id}/{fn}.512.jpg"
+            raw_url = f"https://uploads.mangadex.org/covers/{manga_id}/{fn}"
+            cover_url = f"/api/manga/cover?url={quote(raw_url, safe='')}"
     authors = [r.get("attributes", {}).get("name", "") for r in m.get("relationships", []) if r["type"] == "author"]
     return {
         "id": manga_id, "title": title, "cover": cover_url,
@@ -1529,7 +1546,8 @@ def manga_recommended(manga_id: str):
         for rel in rm.get("relationships", []):
             if rel["type"] == "cover_art" and rel.get("attributes"):
                 fn = rel["attributes"].get("fileName", "")
-                cover_url = f"https://uploads.mangadex.org/covers/{rm['id']}/{fn}.256.jpg"
+                raw_url = f"https://uploads.mangadex.org/covers/{rm['id']}/{fn}"
+                cover_url = f"/api/manga/cover?url={quote(raw_url, safe='')}"
         results.append({
             "id": rm["id"], "title": title, "cover": cover_url, "type": mtype,
         })

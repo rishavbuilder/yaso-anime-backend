@@ -46,7 +46,8 @@ function buildHeader() {
 
 function toggleNsfw(checked) {
   setNsfw(checked);
-  location.reload();
+  showToast(checked ? 'NSFW content enabled' : 'NSFW content disabled');
+  setTimeout(() => location.reload(), 300);
 }
 
 function buildFooter() {
@@ -92,6 +93,7 @@ function buildFooter() {
     </div>
     <div class="foot-bottom">
       <small>© YASŌ ARCHIVE — A NIGHT-SHIFT STREAMING STUDY</small>
+      <small class="foot-shortcut-hint" onclick="showShortcuts()" style="cursor:pointer;opacity:0.75;transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.75">Press <kbd style="background:var(--night-soft);padding:2px 6px;border-radius:3px;font-family:var(--font-m);font-size:.6rem;">?</kbd> for keyboard shortcuts</small>
     </div>`;
 }
 
@@ -251,7 +253,7 @@ function renderBrowseCard(anime) {
   const href = animeHref(anime);
   return `<div class="bc" onclick="location.href='${href}'">
     <div class="bc-front">
-      <img class="bc-art" src="${anime.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+      <img class="bc-art" src="${anime.cover||''}" alt="" onerror="handleImageError(this,'${(title||'').replace(/'/g,"\\'")}')">
       <div class="bc-gradient"></div>
       <div class="bc-score">${score}</div>
       <div class="bc-fmt">${fmt}</div>
@@ -443,6 +445,16 @@ function initSite() {
   initLoader();
   initHeroParallax();
   setTimeout(() => observeReveals(), 50);
+  document.addEventListener('keydown', e => {
+    if (e.key === '?' && !e.target.closest('input,textarea,select')) {
+      e.preventDefault();
+      showShortcuts();
+    }
+    if (e.key === 'Escape') {
+      const o = document.getElementById('shortcutsOverlay');
+      if (o) o.remove();
+    }
+  });
 }
 
 /* ── Continue Watching Rail ── */
@@ -475,7 +487,7 @@ function renderMyList(items) {
     const href = a.slug ? `/details.html?slug=${encodeURIComponent(a.slug)}${nsfw}` : (a.id ? `/details.html?id=${a.id}${nsfw}` : '#');
     return `<a class="wl-card" href="${href}">
       <div class="wl-cover-wrap">
-        <img class="wl-cover" src="${a.cover||''}" alt="" onerror="this.style.background='var(--night-soft)'">
+        <img class="wl-cover" src="${a.cover||''}" alt="" onerror="handleImageError(this,'${(a.title||'').replace(/'/g,"\\'")}')">
         <button class="wl-remove-btn" onclick="event.preventDefault();event.stopPropagation();removeFromWatchlist(${a.id});this.closest('.wl-card').remove();" title="${t('Remove')}">✕</button>
       </div>
       <div class="wl-info">
@@ -487,4 +499,26 @@ function renderMyList(items) {
       </div>
     </a>`;
   }).join('') + '</div>';
+}
+
+function showShortcuts() {
+  if (document.getElementById('shortcutsOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'shortcutsOverlay';
+  overlay.className = 'shortcuts-overlay';
+  overlay.innerHTML = `
+    <div class="shortcuts-card">
+      <div class="shortcuts-title">${t('Keyboard Shortcuts')}</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><kbd>←</kbd><kbd>→</kbd><span>${t('Seek ±10s')}</span></div>
+        <div class="shortcut-row"><kbd>↑</kbd><kbd>↓</kbd><span>${t('Volume ±10%')}</span></div>
+        <div class="shortcut-row"><kbd>Space</kbd><span>${t('Play / Pause')}</span></div>
+        <div class="shortcut-row"><kbd>F</kbd><span>${t('Fullscreen')}</span></div>
+        <div class="shortcut-row"><kbd>M</kbd><span>${t('Mute')}</span></div>
+        <div class="shortcut-row"><kbd>Esc</kbd><span>${t('Close overlay')}</span></div>
+        <div class="shortcut-row"><kbd>?</kbd><span>${t('Show shortcuts')}</span></div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
