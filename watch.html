@@ -59,6 +59,7 @@ let autoPlayTimer = null;
 let animeDetail = null;
 let totalEps = 30;
 let currentSource = null;
+let currentNsfwReferer = '';
 
 async function loadWatch() {
   try {
@@ -75,12 +76,13 @@ async function loadWatch() {
       document.getElementById('watchLoading').style.display = 'none';
 
       currentSource = streamData.source || 'nsfw';
+      currentNsfwReferer = streamData.embed_referer || '';
       const servers = streamData.servers || [];
       renderNsfwServers(servers);
 
       if (streamData.master_url) loadHlsPlayer(streamData.master_url, streamData.embed_url);
       else if (streamData.embed_url) {
-        if (streamData.embed_url.includes('.mp4') || streamData.embed_url.includes('.m3u8')) loadHlsPlayer(streamData.embed_url);
+        if (streamData.embed_url.includes('.mp4') || streamData.embed_url.includes('.m3u8')) loadHlsPlayer(streamData.embed_url, null, currentNsfwReferer);
         else loadIframePlayer(streamData.embed_url);
       }
       else throw new Error('No stream found');
@@ -152,7 +154,7 @@ function switchNsfwServer(idx) {
   const srv = servers[idx];
   if (!srv) return;
   document.querySelectorAll('.wk-server-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.idx) === idx));
-  if (srv.url.includes('.m3u8') || srv.url.includes('.mp4')) loadHlsPlayer(srv.url);
+  if (srv.url.includes('.m3u8') || srv.url.includes('.mp4')) loadHlsPlayer(srv.url, null, srv.referer || '');
   else loadIframePlayer(srv.url);
 }
 
@@ -426,7 +428,7 @@ function getVideoMimeType(url) {
   return '';
 }
 
-function loadHlsPlayer(url, embedFallback) {
+function loadHlsPlayer(url, embedFallback, nsfwReferer) {
   const div = document.getElementById('player');
   div.innerHTML = ''; div.classList.add('active');
   const video = document.createElement('video');
@@ -453,7 +455,7 @@ function loadHlsPlayer(url, embedFallback) {
     }
   } else {
     var mimeType = getVideoMimeType(url);
-    var proxyUrl = isNsfw ? '/nsfw-video-proxy?url=' + encodeURIComponent(url) : url;
+    var proxyUrl = isNsfw ? '/nsfw-video-proxy?url=' + encodeURIComponent(url) + '&referer=' + encodeURIComponent(nsfwReferer || currentNsfwReferer || '') : url;
     if (mimeType && mimeType !== 'application/vnd.apple.mpegurl') {
       var source = document.createElement('source');
       source.src = proxyUrl;

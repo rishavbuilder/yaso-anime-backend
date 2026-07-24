@@ -87,12 +87,14 @@ async def nsfw_stream(body: dict):
     streams = detail.get("stream_urls", [])
     if not streams:
         raise HTTPException(status_code=404, detail="NSFW stream not found")
+    first = streams[0]
     return {
         "status": "success",
         "anime": detail.get("title", slug),
         "episode": episode,
         "master_url": None,
-        "embed_url": streams[0].get("url", ""),
+        "embed_url": first.get("url", ""),
+        "embed_referer": first.get("referer", ""),
         "servers": streams,
         "source": detail.get("source", "nsfw"),
         "meta": {"episodes": 1, "anilist": None, "relations": []},

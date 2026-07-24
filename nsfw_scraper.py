@@ -2,7 +2,7 @@
 # Sources: hanime.tv, ohentai.org, hentaistream.com, latesthentai.com, hentaiyes.com
 
 import re, time, logging, base64
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -936,16 +936,29 @@ def hentaistream_detail(slug):
         views_match = re.search(r'Views?:\s*([\d,]+)', views_text, re.I)
         views = views_match.group(1).replace(",", "") if views_match else "0"
 
-        # Stream URL - prefer iframe embed (handles CDN auth internally)
+        # Stream URL - extract iframe src, fetch frame for direct MP4 with Referer
         stream_urls = []
         for iframe in soup.select("iframe[src]"):
             src = iframe.get("src", "")
             if src and ("frames" in src or "embed" in src or "player" in src):
                 if not src.startswith("http"):
                     src = "https:" + src if src.startswith("//") else HENTAISTREAM_DOMAIN + src
-                # Return the embed iframe URL directly - it handles CDN auth internally
-                stream_urls.append({"label": "Player", "url": src})
-                break
+                # Fetch frame page to extract direct MP4 URL
+                try:
+                    frame_resp = http_get(src, timeout=10)
+                    if frame_resp.status_code == 200:
+                        frame_soup = BeautifulSoup(frame_resp.text, "html.parser")
+                        source_el = frame_soup.select_one("video source") or frame_soup.select_one("source[src]")
+                        if not source_el:
+                            source_el = frame_soup.select_one("video[src]")
+                        if source_el:
+                            mp4_url = source_el.get("src", "")
+                            if mp4_url and mp4_url.startswith("http"):
+                                stream_urls.append({"label": "HentaiStream", "url": mp4_url, "referer": HENTAISTREAM_DOMAIN + "/"})
+                                break
+                except Exception:
+                    pass
+                stream_urls.append({"label": "HentaiStream Embed", "url": src, "referer": HENTAISTREAM_DOMAIN + "/"})
 
         # Episode list from series page
         series_episodes = []
@@ -1513,7 +1526,7 @@ def hentaiyes_detail(slug):
         views_match = re.search(r'([\d,]+)', views_text)
         views = views_match.group(1).replace(",", "") if views_match else "0"
 
-        # Stream URL - prefer iframe embed (handles CDN auth internally)
+        # Stream URL - extract embed iframe, fetch for direct MP4 with Referer
         stream_urls = []
         for iframe in soup.select("iframe[src]"):
             src = iframe.get("src", "")
@@ -1522,8 +1535,32 @@ def hentaiyes_detail(slug):
                     src = "https:" + src
                 elif not src.startswith("http"):
                     src = HENTAIYES_DOMAIN + src
-                # Return the embed iframe URL directly - it handles CDN auth internally
-                stream_urls.append({"label": "Player", "url": src})
+                # Fetch embed page to extract direct video URL
+                try:
+                    embed_resp = http_get(src, timeout=10)
+                    if embed_resp.status_code == 200:
+                        embed_soup = BeautifulSoup(embed_resp.text, "html.parser")
+                        source_el = embed_soup.select_one("video source") or embed_soup.select_one("source[src]")
+                        if not source_el:
+                            source_el = embed_soup.select_one("video[src]")
+                        if source_el:
+                            vid_url = source_el.get("src", "")
+                            if vid_url and vid_url.startswith("http"):
+                                # Determine referer from embed URL domain
+                                embed_domain = urlparse(src)
+                                embed_referer = f"{embed_domain.scheme}://{embed_domain.netloc}/"
+                                stream_urls.append({"label": "HentaiYes", "url": vid_url, "referer": embed_referer})
+                                break
+                        # Also check for JS player file param
+                        file_match = re.search(r'file\s*:\s*["\']?(https?://[^"\'>\s]+\.(mp4|m3u8)[^"\'>\s]*)', embed_resp.text)
+                        if file_match:
+                            embed_domain = urlparse(src)
+                            embed_referer = f"{embed_domain.scheme}://{embed_domain.netloc}/"
+                            stream_urls.append({"label": "HentaiYes", "url": file_match.group(1), "referer": embed_referer})
+                            break
+                except Exception:
+                    pass
+                stream_urls.append({"label": "HentaiYes Embed", "url": src, "referer": HENTAIYES_DOMAIN + "/"})
                 break
 
         # Series info
