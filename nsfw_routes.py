@@ -4,8 +4,8 @@
 import re
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response, StreamingResponse
 
 import nsfw_scraper
 
@@ -157,3 +157,72 @@ async def nsfw_proxy(url: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail="NSFW proxy error")
+
+
+# ──────────────────────────────────────────────
+# NSFW Video Proxy (stream video binary with Range support)
+# ──────────────────────────────────────────────
+
+@router.get("/nsfw-video-proxy")
+async def nsfw_video_proxy(url: str, referer: str = ""):
+    if url.startswith("//"):
+        url = "https:" + url
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise HTTPException(status_code=400, detail="Invalid URL")
+        host = parsed.hostname or ""
+        if host.startswith("10.") or host.startswith("192.168."):
+            raise HTTPException(status_code=400, detail="Invalid URL")
+        if host.startswith("172.") and 16 <= int(host.split(".")[1] or 0) <= 31:
+            raise HTTPException(status_code=400, detail="Invalid URL")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid URL")
+
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Referer": referer if referer else f"{parsed.scheme}://{parsed.netloc}/",
+        }
+
+        import requests as req_lib
+        req_headers = dict(headers)
+        r = req_lib.get(url, headers=req_headers, timeout=30, stream=True)
+
+        if r.status_code not in (200, 206):
+            raise HTTPException(status_code=r.status_code, detail="Upstream error")
+
+        content_type = r.headers.get("Content-Type", "video/mp4")
+        content_length = r.headers.get("Content-Length")
+        content_range = r.headers.get("Content-Range")
+        accept_ranges = r.headers.get("Accept-Ranges", "bytes")
+
+        resp_headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Range",
+            "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
+            "Content-Type": content_type,
+            "Accept-Ranges": accept_ranges,
+        }
+        if content_length:
+            resp_headers["Content-Length"] = content_length
+        if content_range:
+            resp_headers["Content-Range"] = content_range
+
+        def stream_chunks():
+            try:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+            finally:
+                r.close()
+
+        status_code = 206 if r.status_code == 206 else 200
+        return StreamingResponse(stream_chunks(), status_code=status_code, headers=resp_headers)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail="NSFW video proxy error")

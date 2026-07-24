@@ -936,29 +936,16 @@ def hentaistream_detail(slug):
         views_match = re.search(r'Views?:\s*([\d,]+)', views_text, re.I)
         views = views_match.group(1).replace(",", "") if views_match else "0"
 
-        # Stream URL - extract iframe src, then fetch frame page for direct MP4
+        # Stream URL - prefer iframe embed (handles CDN auth internally)
         stream_urls = []
         for iframe in soup.select("iframe[src]"):
             src = iframe.get("src", "")
             if src and ("frames" in src or "embed" in src or "player" in src):
                 if not src.startswith("http"):
                     src = "https:" + src if src.startswith("//") else HENTAISTREAM_DOMAIN + src
-                # Fetch frame page to extract direct MP4 URL
-                try:
-                    frame_resp = http_get(src, timeout=10)
-                    if frame_resp.status_code == 200:
-                        frame_soup = BeautifulSoup(frame_resp.text, "html.parser")
-                        source_el = frame_soup.select_one("video source") or frame_soup.select_one("source[src]")
-                        if not source_el:
-                            source_el = frame_soup.select_one("video[src]")
-                        if source_el:
-                            mp4_url = source_el.get("src", "")
-                            if mp4_url and mp4_url.startswith("http"):
-                                stream_urls.append({"label": "Source 1", "url": mp4_url})
-                                break
-                except Exception:
-                    pass
-                stream_urls.append({"label": "Source 1", "url": src})
+                # Return the embed iframe URL directly - it handles CDN auth internally
+                stream_urls.append({"label": "Player", "url": src})
+                break
 
         # Episode list from series page
         series_episodes = []
@@ -1247,9 +1234,8 @@ def latesthentai_detail(slug):
         brand_el = soup.select_one('a[href*="/brand/"]')
         brand = brand_el.get_text(strip=True) if brand_el else ""
 
-        # Stream URL - extract nhplayer iframe, then decode base64 vid for direct MP4
+        # Stream URL - prefer nhplayer iframe (it handles CDN auth internally)
         stream_urls = []
-        import base64 as b64
         for iframe in soup.select("iframe[src]"):
             src = iframe.get("src", "")
             if not src or "about:blank" in src or len(src) < 10:
@@ -1258,21 +1244,9 @@ def latesthentai_detail(slug):
                 continue
             if not src.startswith("http"):
                 src = "https:" + src if src.startswith("//") else LATESTHENTAI_DOMAIN + src
-            # If it's an nhplayer URL, extract the direct MP4 from player.php
-            if "nhplayer.com" in src:
-                try:
-                    nh_resp = http_get(src, timeout=10)
-                    if nh_resp.status_code == 200:
-                        vid_match = re.search(r'player\.php\?vid=([A-Za-z0-9+/=]+)', nh_resp.text)
-                        if vid_match:
-                            vid_decoded = b64.b64decode(vid_match.group(1)).decode("utf-8", errors="ignore")
-                            mp4_url = vid_decoded.split("|")[0]
-                            if mp4_url.startswith("http"):
-                                stream_urls.append({"label": "Source 1", "url": mp4_url})
-                except Exception:
-                    pass
-            if not stream_urls:
-                stream_urls.append({"label": "Source 1", "url": src})
+            # Return the nhplayer iframe URL - it handles CDN auth/cookies internally
+            # Do NOT decode base64 to raw CDN URLs as they require nhplayer context
+            stream_urls.append({"label": "Player", "url": src})
             break
 
         return {
@@ -1539,7 +1513,7 @@ def hentaiyes_detail(slug):
         views_match = re.search(r'([\d,]+)', views_text)
         views = views_match.group(1).replace(",", "") if views_match else "0"
 
-        # Stream URL - extract embed iframe, then fetch for direct video URL
+        # Stream URL - prefer iframe embed (handles CDN auth internally)
         stream_urls = []
         for iframe in soup.select("iframe[src]"):
             src = iframe.get("src", "")
@@ -1548,27 +1522,8 @@ def hentaiyes_detail(slug):
                     src = "https:" + src
                 elif not src.startswith("http"):
                     src = HENTAIYES_DOMAIN + src
-                # Fetch embed page to extract direct video URL
-                try:
-                    embed_resp = http_get(src, timeout=10)
-                    if embed_resp.status_code == 200:
-                        embed_soup = BeautifulSoup(embed_resp.text, "html.parser")
-                        source_el = embed_soup.select_one("video source") or embed_soup.select_one("source[src]")
-                        if not source_el:
-                            source_el = embed_soup.select_one("video[src]")
-                        if source_el:
-                            vid_url = source_el.get("src", "")
-                            if vid_url and vid_url.startswith("http"):
-                                stream_urls.append({"label": "Source 1", "url": vid_url})
-                                break
-                        # Also check for JS player file param
-                        file_match = re.search(r'file\s*:\s*["\']?(https?://[^"\'>\s]+\.(mp4|m3u8)[^"\'>\s]*)', embed_resp.text)
-                        if file_match:
-                            stream_urls.append({"label": "Source 1", "url": file_match.group(1)})
-                            break
-                except Exception:
-                    pass
-                stream_urls.append({"label": "Source 1", "url": src})
+                # Return the embed iframe URL directly - it handles CDN auth internally
+                stream_urls.append({"label": "Player", "url": src})
                 break
 
         # Series info

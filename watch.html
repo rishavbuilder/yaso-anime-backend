@@ -453,13 +453,14 @@ function loadHlsPlayer(url, embedFallback) {
     }
   } else {
     var mimeType = getVideoMimeType(url);
+    var proxyUrl = isNsfw ? '/nsfw-video-proxy?url=' + encodeURIComponent(url) : url;
     if (mimeType && mimeType !== 'application/vnd.apple.mpegurl') {
       var source = document.createElement('source');
-      source.src = url;
+      source.src = proxyUrl;
       source.type = mimeType;
       video.appendChild(source);
     } else {
-      video.src = url;
+      video.src = proxyUrl;
     }
     video.onerror = function() {
       if (isNsfw && embedFallback && embedFallback !== url) loadIframePlayer(embedFallback);
