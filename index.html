@@ -24,7 +24,7 @@
 
 <main class="main">
   <section class="hero">
-    <div class="hero-bg" style="background-image:url('/public/journey-through-bamboo-forest.jpg')"></div>
+    <div class="hero-bg" id="heroBg" style="background-image:url('/public/journey-through-bamboo-forest.jpg')"></div>
     <div class="hero-content">
       <div class="eyebrow" data-i18n-sub="Season 06|||Now Streaming">Season 06 — Now Streaming</div>
       <h1>夜想アーカイブ<small data-i18n="The Archive Watches After Midnight">The Archive Watches After Midnight</small></h1>
@@ -127,6 +127,11 @@ loadSection(fetchAnikotoUpcoming, 'upcomingRail', renderDateList, 8);
 loadSection(fetchAnikotoNewRelease, 'newReleaseRail', renderBento, 5);
 loadSection(fetchAnikotoNewAdded, 'newAddedRail', renderCompactGrid, 12);
 loadSection(fetchAnikotoCompleted, 'completedRail', renderTimeline, 8);
+
+if (getNsfw()) {
+  var heroBg = document.getElementById('heroBg');
+  if (heroBg) heroBg.style.backgroundImage = "url('/public/c1e4a8b37dccb95eca2b645f7f3473f2.jpg')";
+}
 </script>
 </body>
 </html>
