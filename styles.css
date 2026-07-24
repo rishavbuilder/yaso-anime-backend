@@ -547,9 +547,10 @@ footer{position:relative;padding:0;border-top:none;overflow:hidden;min-height:40
 .foot-bottom small{font-family:var(--font-m);font-size:.58rem;color:var(--washi-dim);letter-spacing:.08em;}
 .foot-shortcut-hint kbd{background:var(--night-soft);padding:2px 6px;border-radius:3px;font-family:var(--font-m);font-size:.55rem;border:1px solid var(--line);}
 @media(max-width:768px){
+  .foot-bg{background-size:cover;background-position:center top;}
   .foot-content{flex-direction:column;align-items:center;text-align:center;padding:32px 5vw 16px;}
   .foot-nav{gap:32px;}
-  footer{min-height:400px;}
+  footer{min-height:350px;}
 }
 
 .loading{text-align:center;padding:50px;color:var(--washi-dim);font-family:var(--font-m);font-size:.78rem;display:flex;flex-direction:column;align-items:center;gap:8px;}
