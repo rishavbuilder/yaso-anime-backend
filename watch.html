@@ -416,6 +416,16 @@ async function loadTrending() {
   }
 }
 
+function getVideoMimeType(url) {
+  const lower = url.split('?')[0].split('#')[0].toLowerCase();
+  if (lower.endsWith('.mp4')) return 'video/mp4';
+  if (lower.endsWith('.webm')) return 'video/webm';
+  if (lower.endsWith('.mkv')) return 'video/x-matroska';
+  if (lower.endsWith('.ogv')) return 'video/ogg';
+  if (lower.endsWith('.m3u8')) return 'application/vnd.apple.mpegurl';
+  return '';
+}
+
 function loadHlsPlayer(url, embedFallback) {
   const div = document.getElementById('player');
   div.innerHTML = ''; div.classList.add('active');
@@ -429,9 +439,10 @@ function loadHlsPlayer(url, embedFallback) {
       hlsInstance.loadSource(url);
       hlsInstance.attachMedia(video);
       hlsInstance.on(Hls.Events.ERROR, function(event, data) {
-        if (data.fatal && embedFallback) {
+        if (data.fatal) {
           hlsInstance.destroy(); hlsInstance = null;
-          loadIframePlayer(embedFallback);
+          if (isNsfw && embedFallback && !embedFallback.includes('.m3u8')) loadIframePlayer(embedFallback);
+          else if (embedFallback) loadIframePlayer(embedFallback);
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -441,9 +452,18 @@ function loadHlsPlayer(url, embedFallback) {
       };
     }
   } else {
-    video.src = url;
+    var mimeType = getVideoMimeType(url);
+    if (mimeType && mimeType !== 'application/vnd.apple.mpegurl') {
+      var source = document.createElement('source');
+      source.src = url;
+      source.type = mimeType;
+      video.appendChild(source);
+    } else {
+      video.src = url;
+    }
     video.onerror = function() {
-      if (embedFallback) loadIframePlayer(embedFallback);
+      if (isNsfw && embedFallback && embedFallback !== url) loadIframePlayer(embedFallback);
+      else if (embedFallback) loadIframePlayer(embedFallback);
     };
   }
   setupAutoPlay(video);
@@ -453,7 +473,7 @@ function loadIframePlayer(url) {
   const div = document.getElementById('player');
   div.innerHTML = ''; div.classList.add('active');
   const iframe = document.createElement('iframe');
-  iframe.src = url;
+  iframe.src = isNsfw ? '/nsfw-proxy?url=' + encodeURIComponent(url) : url;
   iframe.allow = 'autoplay; fullscreen; picture-in-picture';
   iframe.referrerPolicy = isNsfw ? 'no-referrer-when-downgrade' : 'no-referrer';
   div.appendChild(iframe);

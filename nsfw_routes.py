@@ -141,7 +141,15 @@ async def nsfw_proxy(url: str):
         content = re.sub(r'((?:src|href|action)=["\'])((?!https?://|//)[^"\']+)', fix_rel, content)
         content = re.sub(r'((?:poster|source|file)\s*[:=]\s*["\'])((?!https?://|//)[^"\']+)', fix_rel, content)
 
-        return Response(content=content, media_type="text/html", headers={
+        upstream_ct = resp.headers.get("Content-Type", "text/html")
+        if "video/" in url.lower() or "video/" in upstream_ct:
+            media_type = upstream_ct if "video/" in upstream_ct else "video/mp4"
+        elif ".m3u8" in url.lower():
+            media_type = "application/vnd.apple.mpegurl"
+        else:
+            media_type = "text/html"
+
+        return Response(content=content, media_type=media_type, headers={
             "Access-Control-Allow-Origin": "*",
             "X-Frame-Options": "ALLOWALL",
         })
