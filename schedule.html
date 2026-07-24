@@ -98,7 +98,7 @@ function renderStats() {
 
 function renderCard(a) {
   const detailHref = `/details.html?id=${a.id || ''}`;
-  return `<div class="bc">
+  return `<div class="bc" onclick="location.href='${detailHref}'">
     <div class="bc-front">
       <img class="bc-art" src="${a.cover || ''}" alt="" onerror="this.style.background='var(--night-soft)'">
       <div class="bc-gradient"></div>
@@ -118,7 +118,7 @@ function renderCard(a) {
         <span style="color:var(--shu);">${timeUntil(a.airing_at)}</span>
       </div>
       <div class="bcb-actions">
-        <a class="bcb-btn bcb-btn-details" href="${detailHref}">${t('details →')}</a>
+        <a class="bcb-btn bcb-btn-details" href="${detailHref}" onclick="event.stopPropagation()">${t('details →')}</a>
       </div>
     </div>
   </div>`;
@@ -139,6 +139,7 @@ function renderGrid() {
 function renderAll() {
   const el = document.getElementById('scheduleContent');
   el.innerHTML = renderDayTabs() + renderStats() + renderGrid();
+  initMobileCardFlip();
 }
 
 function selectDay(idx) {

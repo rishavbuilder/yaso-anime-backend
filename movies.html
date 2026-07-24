@@ -36,6 +36,7 @@ document.getElementById('pageTitle2').textContent = t('Movies');
 const items = filterAnime({ type: 'MOVIE' });
 document.getElementById('movieGrid').innerHTML = items.length ? items.map(a => renderCard(a)).join('') : '<div class="loading">No movies found</div>';
 document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+initMobileCardFlip();
 </script>
 </body>
 </html>

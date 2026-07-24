@@ -36,6 +36,7 @@ document.getElementById('pageTitle2').textContent = t('Popular');
 const items = sortAnime(ANIME, 'score');
 document.getElementById('popGrid').innerHTML = items.map(a => renderCard(a)).join('');
 document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+initMobileCardFlip();
 </script>
 </body>
 </html>

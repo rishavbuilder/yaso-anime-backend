@@ -121,6 +121,7 @@ async function loadBrowse() {
     }
     grid.innerHTML = items.map(a => renderAnikotoCard(a)).join('');
     renderPagination();
+    initMobileCardFlip();
   } catch(e) {
     grid.innerHTML = `<div class="loading">${t('Failed to load')}</div>`;
   }

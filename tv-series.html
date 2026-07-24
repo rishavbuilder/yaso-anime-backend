@@ -36,6 +36,7 @@ document.getElementById('pageTitle2').textContent = t('TV Series');
 const items = filterAnime({ type: 'TV' });
 document.getElementById('tvGrid').innerHTML = items.length ? items.map(a => renderCard(a)).join('') : '<div class="loading">No TV series found</div>';
 document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+initMobileCardFlip();
 </script>
 </body>
 </html>

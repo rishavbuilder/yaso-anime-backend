@@ -58,6 +58,7 @@ async function loadGenre() {
     if (!items.length) { grid.innerHTML = '<div class="loading">No anime found</div>'; document.getElementById('genrePag').innerHTML = ''; return; }
     grid.innerHTML = items.map(a => renderCard(a)).join('');
     grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+    initMobileCardFlip();
     let pagHtml = '';
     if (gPage > 1) pagHtml += `<button class="btn" onclick="gPage=${gPage-1};loadGenre();" style="padding:10px 18px;font-size:.72rem;"><span>← Prev</span></button>`;
     pagHtml += `<span style="font-family:var(--font-m);font-size:.72rem;color:var(--washi-dim);padding:10px;">Page ${gPage}</span>`;

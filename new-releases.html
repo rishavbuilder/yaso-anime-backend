@@ -36,6 +36,7 @@ document.getElementById('pageTitle2').textContent = t('New Releases');
 const items = sortAnime(ANIME.filter(a => a.status === 'Airing'), 'id');
 document.getElementById('newGrid').innerHTML = items.map(a => renderCard(a)).join('');
 document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+initMobileCardFlip();
 </script>
 </body>
 </html>

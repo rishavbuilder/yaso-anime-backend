@@ -278,7 +278,7 @@ function renderAnikotoCard(a) {
   let badges = '';
   if (sub) badges += `<span class="bc-ep-badge sub">${sub} SUB</span>`;
   if (dub) badges += `<span class="bc-ep-badge dub">${dub} DUB</span>`;
-  return `<div class="bc">
+  return `<div class="bc" onclick="location.href='${detailHref}'">
     <div class="bc-front">
       <img class="bc-art" src="${a.cover || ''}" alt="" onerror="this.style.background='var(--night-soft)'">
       <div class="bc-gradient"></div>
@@ -296,8 +296,8 @@ function renderAnikotoCard(a) {
       </div>
       <div class="bcb-genres">${(a.genres || []).slice(0, 3).map(g => '<span>' + g + '</span>').join('')}</div>
       <div class="bcb-actions">
-        <a class="bcb-btn bcb-btn-details" href="${detailHref}">${t('details →')}</a>
-        <a class="bcb-btn bcb-btn-watch" href="${watchHref}">${t('Watch Now')} </a>
+        <a class="bcb-btn bcb-btn-details" href="${detailHref}" onclick="event.stopPropagation()">${t('details →')}</a>
+        <a class="bcb-btn bcb-btn-watch" href="${watchHref}" onclick="event.stopPropagation()">${t('Watch Now')} </a>
       </div>
     </div>
   </div>`;
@@ -436,6 +436,22 @@ function initHamburger() {
   }, { passive: true });
 }
 
+function initMobileCardFlip() {
+  if (!matchMedia('(hover:none) and (pointer:coarse)').matches) return;
+  document.querySelectorAll('.bc:not(.touch-bound),.card:not(.touch-bound)').forEach(el => {
+    el.classList.add('touch-bound');
+    el.addEventListener('touchstart', function(e) {
+      if (e.target.closest('a,bcb-btn')) return;
+      const wasFlipped = this.classList.contains('flipped');
+      document.querySelectorAll('.bc.flipped,.card.flipped').forEach(c => c.classList.remove('flipped'));
+      if (!wasFlipped) {
+        e.preventDefault();
+        this.classList.add('flipped');
+      }
+    }, { passive: false });
+  });
+}
+
 function initSite() {
   buildHeader();
   buildFooter();
@@ -444,6 +460,7 @@ function initSite() {
   initPetals();
   initLoader();
   initHeroParallax();
+  initMobileCardFlip();
   setTimeout(() => observeReveals(), 50);
   document.addEventListener('keydown', e => {
     if (e.key === '?' && !e.target.closest('input,textarea,select')) {

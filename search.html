@@ -49,6 +49,7 @@ async function doSearch(val) {
     if (!results.length) { grid.innerHTML = '<div class="loading">No results found</div>'; return; }
     grid.innerHTML = results.map(a => renderCard(a)).join('');
     grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+    initMobileCardFlip();
   } catch(e) {
     document.getElementById('searchGrid').innerHTML = '<div class="loading">Search failed</div>';
   }

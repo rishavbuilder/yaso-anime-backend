@@ -48,7 +48,7 @@ if (!sId) {
   document.getElementById('studioSub').innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">${STUDIOS.map(s => `<a href="studio.html?s=${s.id}" style="font-size:.68rem;padding:5px 14px;border:1px solid ${s.id===sId?'var(--gold)':'var(--line)'};color:${s.id===sId?'var(--gold)':'var(--washi-dim)'};cursor:pointer;font-family:var(--font-m);letter-spacing:.06em;">${localized(s.name)}</a>`).join('')}</div>`;
   const grid = document.getElementById('studioGrid');
   if (!results.length) { grid.innerHTML = '<div class="loading">No anime found</div>'; }
-  else { grid.innerHTML = results.map(a => renderCard(a)).join(''); grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el)); }
+  else { grid.innerHTML = results.map(a => renderCard(a)).join(''); grid.querySelectorAll('.card').forEach(el => cardObserver.observe(el)); initMobileCardFlip(); }
 }
 </script>
 </body>

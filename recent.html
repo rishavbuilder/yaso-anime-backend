@@ -36,6 +36,7 @@ document.getElementById('pageTitle2').textContent = t('Recent');
 const items = sortAnime(ANIME, 'id');
 document.getElementById('recentGrid').innerHTML = items.map(a => renderCard(a)).join('');
 document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+initMobileCardFlip();
 </script>
 </body>
 </html>

@@ -91,6 +91,7 @@ function toggleGenres() {
 fetchTrending().then(items => {
   document.getElementById('trendingRail').innerHTML = renderSpotlight(items.results || items);
   document.querySelectorAll('#trendingRail .card, #trendingRail .spotlight-main, #trendingRail .sp-card').forEach(el => cardObserver.observe(el));
+  initMobileCardFlip();
 }).catch(() => {
   document.getElementById('trendingRail').innerHTML = `<div class="loading" style="flex-direction:column;gap:12px;">
     <span>${t('Failed to load')}</span>
@@ -115,6 +116,7 @@ function loadSection(fetchFn, railId, renderFn, sliceN) {
     const items = (data.results || data || []).slice(0, sliceN || 12);
     document.getElementById(railId).innerHTML = renderFn(items);
     document.querySelectorAll('#' + railId + ' .card, #' + railId + ' .p-card, #' + railId + ' .d-item, #' + railId + ' .bento-main, #' + railId + ' .bento-sm, #' + railId + ' .c-card, #' + railId + ' .tl-item').forEach(el => cardObserver.observe(el));
+    initMobileCardFlip();
   }).catch(() => {
     showError(railId, fetchFn, renderFn, sliceN);
   });

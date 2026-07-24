@@ -38,6 +38,7 @@ async function load() {
     const items = await fetchTrending();
     document.getElementById('trendingGrid').innerHTML = items.map(a => renderCard(a)).join('');
     document.querySelectorAll('.card').forEach(el => cardObserver.observe(el));
+    initMobileCardFlip();
   } catch(e) {
     document.getElementById('trendingGrid').innerHTML = '<div class="loading">Failed to load</div>';
   }

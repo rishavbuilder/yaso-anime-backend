@@ -1,0 +1,6 @@
+{
+  "files": ["**/*.html"],
+  "insertBefore": "</head>",
+  "commentSyntax": "<!-- impeccable -->",
+  "cspChecked": true
+}
